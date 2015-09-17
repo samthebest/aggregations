@@ -1,14 +1,13 @@
 package sam.aggregations
 
-import org.specs2.matcher.MatchResult
-import org.scalacheck.{Prop, Gen, Arbitrary}
+import org.scalacheck.{Prop, Arbitrary, Gen}
 import org.specs2.ScalaCheck
+import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
 
 import scala.util.{Random, Success, Try}
 
-class MedianSpec extends Specification with ScalaCheck {
-  sequential
+class MedianSpecUtils extends Specification with ScalaCheck {
 
   implicit def toProp(m: MatchResult[Any]): Prop = resultProp(m)
 
@@ -126,7 +125,7 @@ class MedianSpec extends Specification with ScalaCheck {
       }
     }
 
-  def medianProperties(memCappedFac: Int => Median): Unit = {
+  def medianProperties(memCappedFac: Int => Median): Unit =
     "Median aggregator properties" should {
       val bigMemCap = 500
       val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
@@ -200,8 +199,5 @@ class MedianSpec extends Specification with ScalaCheck {
           median1.result must_=== median2.result
         })
     }
-  }
 
-  basicMedianSpecs(() => new ExactMedian())
-  medianProperties((_: Int) => new ExactMedian())
 }
