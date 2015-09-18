@@ -16,7 +16,7 @@ object DynamicBucketMedian {
   }
 }
 
-class DynamicBucketMedian(maxMapSize: Int, balanceRatio: Double) extends Median {
+case class DynamicBucketMedian(maxMapSize: Int, balanceRatio: Double = 1.0) extends Median {
   // first implementation will use a mutable map, should be replaced with custom Array based implementation
 
   val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty
