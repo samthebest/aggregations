@@ -50,7 +50,6 @@ object ErrorEstimator {
     )
   }
 
-
   val rand = new Random()
 
   def normalishSample(n: Int, max: Int): IndexedSeq[Long] = {

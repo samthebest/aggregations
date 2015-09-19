@@ -5,5 +5,3 @@ trait Median {
   def update(m: Median): Unit
   def result: Double
 }
-
-

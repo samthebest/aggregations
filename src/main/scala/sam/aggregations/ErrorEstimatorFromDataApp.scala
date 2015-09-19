@@ -2,6 +2,7 @@ package sam.aggregations
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+// TODO A similar one for Normal and Uniform
 object ErrorEstimatorFromDataApp {
   def main(args: Array[String]): Unit = {
     // Use Scallop when this gets more complicated
@@ -16,7 +17,6 @@ object ErrorEstimatorFromDataApp {
         "spark.akka.frameSize" -> 500.toString,
         "spark.akka.askTimeout" -> 100.toString,
         "spark.worker.timeout" -> 150.toString,
-        //        "spark.akka.timeout" -> "600”,
         "spark.shuffle.consolidateFiles" -> "true",
         "spark.core.connection.ack.wait.timeout" -> "600"
       )
@@ -27,15 +27,25 @@ object ErrorEstimatorFromDataApp {
 
     @transient val sc = new SparkContext(conf)
 
-    println(
+    val report =
       ErrorEstimator.fromTestData(
         testData = sc.textFile(testDataPath).map(_.split("\t").toList).map {
           case key :: value :: Nil => (key, value.toLong)
         },
-        medianFac = (i: Int) => DynamicBucketMedian(i),
+        medianFac = (i: Int) => DynamicBucketingMedian(i),
         memoryCap = 100
       )
-      .pretty
-    )
+
+    println("report:\n" + report.pretty)
+
+    if (acceptanceTest(report)) {
+      println("Test passed")
+      System.exit(0)
+    } else {
+      println("Test FAILED FOOL")
+      System.exit(1)
+    }
   }
+
+  def acceptanceTest(report: Report): Boolean = report.worstError < 0.03 && report.averageError < 0.02
 }
