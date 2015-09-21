@@ -36,19 +36,25 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       median.getMap.size must_=== median.size
     }
 
-    "Can get correct answer even compressing 3 points to 2" in {
+    "Can get correct map compressing 4 points to 2" in {
+      val median = new DynamicBucketingMedian(2)
+      (1 to 4).map(_.toLong).foreach(median.update)
+      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l)
+    }
+
+    "Can get correct answer compressing 3 points to 2" in {
       val median = new DynamicBucketingMedian(2)
       (1 to 3).map(_.toLong).foreach(median.update)
       median.result must_=== 2.0
     }
 
-    "Can get correct answer even compressing 3 points to 2" in {
+    "Can get correct answer compressing 3 points to 2" in {
       val median = new DynamicBucketingMedian(2)
       (2 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 3.0
     }
 
-    "Can get correct answer even compressing 4 points to 2" in {
+    "Can get correct answer compressing 4 points to 2" in {
       val median = new DynamicBucketingMedian(2)
       (1 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 2.5
@@ -165,25 +171,103 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       }
 
 
-//      "when 2 overlapping" in {
-//        def map = mutable.Map((1l, 2l) -> 11l, (2l, 3l) -> 9l)
-//
-//        mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 3l) -> 20l)
-//      }
-//
-//      "when 3 overlapping with limit 2" in {
-//        def map = mutable.Map((1l, 2l) -> 11l, (2l, 10l) -> 9l, (4l, 16l) -> 22l)
-//
-//        mergeSmallestConsecutive(map, 2) must_=== mutable.Map((1l, 10l) -> 20l, (4l, 16l) -> 22l)
-//      }
-//
-//      "when 3 overlapping with limit 2" in {
-//        def map = mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
-//
-//        mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 4l) -> 7l)
-//      }
+
+      //      "when 2 overlapping" in {
+      //        def map = mutable.Map((1l, 2l) -> 11l, (2l, 3l) -> 9l)
+      //
+      //        mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 3l) -> 20l)
+      //      }
+      //
+      //      "when 3 overlapping with limit 2" in {
+      //        def map = mutable.Map((1l, 2l) -> 11l, (2l, 10l) -> 9l, (4l, 16l) -> 22l)
+      //
+      //        mergeSmallestConsecutive(map, 2) must_=== mutable.Map((1l, 10l) -> 20l, (4l, 16l) -> 22l)
+      //      }
+      //
+      //      "when 3 overlapping with limit 2" in {
+      //        def map = mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
+      //
+      //        mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 4l) -> 7l)
+      //      }
     }
   }
 
+  "mergeSmallestConsecutive" should {
+    import DynamicBucketingMedian._
+    "Find the middle range with correct counts, with 1 element Map" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l)) must_=== 0.0
+    }
 
+    "Find the middle range with correct counts, with 3 element Map" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l, (1l, 1l) -> 1l, (2l, 2l) -> 1l)) must_=== 1.0
+    }
+
+    "Find the middle range with correct counts, with 3 element Map" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l, (1l, 1l) -> 1l, (2l, 2l) -> 3l)) must_=== 2.0
+    }
+
+    "Find the middle range with correct counts, with 3 element Map and sum is 6" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l, (1l, 1l) -> 2l, (2l, 2l) -> 3l)) must_=== 1.5
+    }
+
+    "Find the middle range with correct counts, with 3 element Map and sum is 4" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l, (1l, 1l) -> 2l, (2l, 2l) -> 1l)) must_=== 1.0
+    }
+
+    "Find the middle range with correct counts, with 2 element Map and total count is 3" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 1l, (1l, 1l) -> 2l)) must_=== 1.0
+    }
+
+    "Find the middle range with correct counts, with 3 element Map and different counts" in {
+      medianFromDisjointBuckets(Map((0l, 0l) -> 10l, (1l, 1l) -> 30l, (2l, 2l) -> 21l)) must_=== 1.0
+    }
+
+    "Find the middle range with correct counts, with 2 element Map and same counts" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 2l, (3l, 4l) -> 2l)) must_=== 2.5
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (10l, 15l) -> 30l, (50l, 60l) -> 40)) must_=== 32.5
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets, " +
+      "extra bucket with last count 18" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
+        (100l, 100l) -> 18l)) must_=== 12.5
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets, " +
+      "extra bucket with last count 19" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
+        (100l, 100l) -> 19l)) must_=== 15.0
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets, " +
+      "extra bucket with last count 19" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
+        (100l, 100l) -> 20l)) must_=== 32.5
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets, " +
+      "extra bucket with last count 20" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
+        (100l, 100l) -> 21l)) must_=== 50.0
+    }
+
+    "return the mean value of median bucket when sum is even and the middle indexes fall between two buckets, " +
+      "extra bucket with last count 21" in {
+      medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
+        (100l, 100l) -> 22l)) must_=== 55.0
+    }
+
+
+    //    "Sams really hard one" in {
+    //      medianFromDisjointBuckets(Map(
+    //        (0l, 0l) -> 10l,
+    //        (1l, 1l) -> 30l,
+    //        (5l, 55l) -> 1l,
+    //        (56l, 66l) ->
+    //      )) must_=== 1.0
+    //    }
+  }
 }

@@ -24,6 +24,7 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
 }
 
 object ErrorEstimator {
+  // TODO Wrong - we ought to be using combineByKey, not groupBy and mapValues
   def fromTestData[T: ClassTag](testData: RDD[(T, Long)],
                                 medianFac: Int => Median[_] = _ => new ExactMedian(),
                                 memoryCap: Int = 1000): Report = {

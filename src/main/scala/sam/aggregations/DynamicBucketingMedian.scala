@@ -2,7 +2,15 @@ package sam.aggregations
 
 import scala.collection.mutable
 
+case class MiddleRange(start: Long = 0l,
+                       end: Long = 0l,
+                       totalCountLeft: Long = 0l,
+                       middleCount: Option[Long] = Some(1l),
+                       totalCountRight: Long = 0l,
+                       exactMedian: Option[Double] = None)
+
 object DynamicBucketingMedian {
+  // Assumes disjoint
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
     if (m.size <= sizeLimit) m
     else {
@@ -20,6 +28,61 @@ object DynamicBucketingMedian {
         m += (firstStart, secondEnd) -> (firstCount + secondCount)
       }
       m
+    }
+  }
+
+  // When they overlap, we move the next bucket at the previous one + 1??
+
+  // Actually no, all we can do, when we apply same logic is eliminate the start point - nothing more.
+
+  // A simple MVP would be to rebalance.
+
+  // The really hard case for overlapping buckets is when one bucket completely covers another.  In this situation we
+  // still have information - particularly that at least one element exists at the end points, we also have some
+  // "distribution" information - or density information. This can give us more information (think about the
+  // simplest non-trivial case, each bucket has 3 elements.
+
+  // We could handle this case seperately, by merging all these together, but keeping a record of there originals
+  // Then when the middle index lies inside one of the big guys that covers the others, we can have some other method
+  // that handles it.  We essentially have a well defined density function, where we can assume it's uniform.
+
+  // Things get uber hard when we have constructed the map from many many other maps, this could mean we have a
+  // horrible lattice structure.
+
+  // Yes plan should be to merge overlapping buckets but keep their density information (actually we can compute
+  // exact density information e.g. (1, 3) -> 3 goes to (1 -> 1.5, 2 -> 1.0, 3 -> 1.5)
+
+  def medianFromDisjointBuckets(m: Map[(Long, Long), Long]): Double = {
+    val sorted@(_, headCount) :: _ = m.toList.sortBy(_._1)
+
+    // bucket, totalUpToAndIncludingBucket
+    val cumulativeCounts: List[(((Long, Long), Long), Long)] =
+      sorted.zip(sorted.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2))
+
+    cumulativeCounts.last._2 match {
+      case odd if odd % 2 == 1 =>
+        val middleIndex = (odd.toDouble / 2).ceil.toLong
+
+        // Assumes each bucket has the endpoints
+        cumulativeCounts.find(_._2 >= middleIndex).get match {
+          // Exact case
+          case (((_, end), _), cum) if cum == middleIndex => end.toDouble
+          // Exact case
+          case (((start, _), count), cum) if (cum - count + 1) == middleIndex => start.toDouble
+          // Assumes symmetrical distribution
+          case (((start, end), _), _) => (start + end).toDouble / 2
+        }
+
+      case even =>
+        val middleIndex = even / 2
+
+        (cumulativeCounts.find(_._2 >= middleIndex).get, cumulativeCounts.find(_._2 >= middleIndex + 1).get) match {
+          case (bucketLeft@(((start, end), _), _), bucketRight) if bucketLeft == bucketRight =>
+            (start + end).toDouble / 2
+          case ((((_, endLeft), _), _), (((startRight, _), _), _)) =>
+            (endLeft + startRight).toDouble / 2
+
+        }
     }
   }
 }
@@ -52,8 +115,7 @@ class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedi
     if (m.isEmpty) exactMedian.result
     else {
       splitTrivialPairs()
-      val keys = m.keySet.toList.sorted.map(_._1)
-      keys(keys.size / 2)
+      medianFromDisjointBuckets(m.toMap)
     }
 
   def splitTrivialPairs(): Unit = m.foreach {
