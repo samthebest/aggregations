@@ -6,7 +6,7 @@ object DynamicBucketingMedian {
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
     if (m.size <= sizeLimit) m
     else {
-      // TODO CPU Optimisation - we sort many times, we only need to do once - use a Top-N pattern
+      // TODO We might be able to avoid this N^2 iteration
       (1 to (m.size - sizeLimit)).foreach { _ =>
         val List((firstRange@(firstStart, _), firstCount), (secondRange@(_, secondEnd), secondCount)) =
           m.toList.sortBy(_._1).sliding(2).minBy {
@@ -51,9 +51,19 @@ class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedi
   def result: Double =
     if (m.isEmpty) exactMedian.result
     else {
+      splitTrivialPairs()
       val keys = m.keySet.toList.sorted.map(_._1)
       keys(keys.size / 2)
     }
+
+  def splitTrivialPairs(): Unit = m.foreach {
+    case (key@(start, end), 2) =>
+      m -= key
+      m += (start, start) -> 1
+      m += (end, end) -> 1
+    case _ => ()
+  }
+
 
   def update(m: DynamicBucketingMedian): Unit = exactMedian.update(m.exactMedian)
 }
