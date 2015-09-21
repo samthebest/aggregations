@@ -24,9 +24,9 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
 }
 
 object ErrorEstimator {
-  def fromTestData[T: ClassTag, M <: Median[M]](testData: RDD[(T, Long)],
-                                                medianFac: Int => M,
-                                                memoryCap: Int = 1000): Report = {
+  def fromTestData[T: ClassTag, M <: Median[M] : ClassTag](testData: RDD[(T, Long)],
+                                                           medianFac: Int => M,
+                                                           memoryCap: Int = 1000): Report = {
     val estimates: RDD[(T, Double)] =
       testData.combineByKey(
         createCombiner = (l: Long) => {

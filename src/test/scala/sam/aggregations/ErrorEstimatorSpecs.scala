@@ -44,7 +44,8 @@ class ErrorEstimatorSpecs extends Specification with Serializable {
     }
 
     "Produce empty report for empty RDD" in {
-      ErrorEstimator.fromTestData(staticSc.makeRDD(Nil: List[(String, Long)])) must_=== Report(Nil, 1.0, 1.0, 1.0)
+      ErrorEstimator.fromTestData(staticSc.makeRDD(Nil: List[(String, Long)]),
+        i => new ExactMedian()) must_=== Report(Nil, 1.0, 1.0, 1.0)
     }
 
     "Produce single report for single common key RDD" in {

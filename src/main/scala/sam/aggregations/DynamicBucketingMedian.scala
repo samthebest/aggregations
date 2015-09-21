@@ -62,12 +62,11 @@ object DynamicBucketingMedian {
 import DynamicBucketingMedian._
 
 // Not thread safe
-class DynamicBucketingMedian(val sizeLimit: Int) extends Median[DynamicBucketingMedian] {
+case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
+  extends Median[DynamicBucketingMedian] {
+
   def size: Int = m.size
-
   def getMap: Map[(Long, Long), Long] = m.toMap
-
-  private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty
 
   def update(e: Long): Unit =
     m.find {
