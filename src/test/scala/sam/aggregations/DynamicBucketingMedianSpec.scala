@@ -59,16 +59,55 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       emptyMap must_=== mutable.Map.empty[(Long, Long), Long]
     }
 
-    "do not mutate the map when is smaller than sizeLimit" in {
-      def map = mutable.Map((1l,1l) -> 1l)
+    "do not mutate the map when is smaller or equals than sizeLimit" in {
+      "and have only one key" in {
+        def map = mutable.Map((1l, 1l) -> 1l)
 
-      mergeSmallestConsecutive(map, 1) must_=== map
+        mergeSmallestConsecutive(map, 1) must_=== map
+      }
+
+      "and have 2 keys" in {
+        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
+
+        mergeSmallestConsecutive(map, 2) must_=== map
+      }
+
+      "and have multiple keys" in {
+        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l, (4l, 4l) -> 1l, (5l, 5l) -> 1l)
+
+        mergeSmallestConsecutive(map, 5) must_=== map
+      }
     }
 
-    "do not mutate the map when is smaller than sizeLimit" in {
-      def map = mutable.Map((1l,1l) -> 1l)
+    "mutate in-place the specified mutable map" in {
+      val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
 
-      mergeSmallestConsecutive(map, 1) must_=== map
+      mergeSmallestConsecutive(map, 1)
+
+      map must_=== mutable.Map((1l, 2l) -> 2l)
+    }
+
+    "return the specified map" in {
+      "when mutating" in {
+        val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
+
+      mergeSmallestConsecutive(map, 1).equals(map.asInstanceOf[Any]) must_=== true
+      }
+
+      "when not mutating" in {
+        val map = mutable.Map((1l, 1l) -> 1l)
+
+        mergeSmallestConsecutive(map, 1).equals(map.asInstanceOf[Any]) must_=== true
+      }
+    }
+
+
+    "merge the two consecutive pairs with the smallest joint size" in {
+      "when there are 2 buckets with limit of one" in {
+        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
+
+        mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 2l) -> 2l)
+      }
     }
   }
 

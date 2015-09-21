@@ -4,7 +4,12 @@ import scala.collection.mutable
 
 object DynamicBucketingMedian {
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
-    m
+    if (m.size <= sizeLimit) m
+    else {
+      val newBucket = (m.map(_._1._1).min, m.map(_._1._2).max) -> 2l
+      m.clear()
+      m += newBucket
+    }
   }
 }
 
