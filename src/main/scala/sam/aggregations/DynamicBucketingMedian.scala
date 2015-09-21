@@ -2,13 +2,6 @@ package sam.aggregations
 
 import scala.collection.mutable
 
-case class MiddleRange(start: Long = 0l,
-                       end: Long = 0l,
-                       totalCountLeft: Long = 0l,
-                       middleCount: Option[Long] = Some(1l),
-                       totalCountRight: Long = 0l,
-                       exactMedian: Option[Double] = None)
-
 object DynamicBucketingMedian {
   // Assumes disjoint
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
@@ -30,27 +23,6 @@ object DynamicBucketingMedian {
       m
     }
   }
-
-  // When they overlap, we move the next bucket at the previous one + 1??
-
-  // Actually no, all we can do, when we apply same logic is eliminate the start point - nothing more.
-
-  // A simple MVP would be to rebalance.
-
-  // The really hard case for overlapping buckets is when one bucket completely covers another.  In this situation we
-  // still have information - particularly that at least one element exists at the end points, we also have some
-  // "distribution" information - or density information. This can give us more information (think about the
-  // simplest non-trivial case, each bucket has 3 elements.
-
-  // We could handle this case seperately, by merging all these together, but keeping a record of there originals
-  // Then when the middle index lies inside one of the big guys that covers the others, we can have some other method
-  // that handles it.  We essentially have a well defined density function, where we can assume it's uniform.
-
-  // Things get uber hard when we have constructed the map from many many other maps, this could mean we have a
-  // horrible lattice structure.
-
-  // Yes plan should be to merge overlapping buckets but keep their density information (actually we can compute
-  // exact density information e.g. (1, 3) -> 3 goes to (1 -> 1.5, 2 -> 1.0, 3 -> 1.5)
 
   def medianFromDisjointBuckets(m: Map[(Long, Long), Long]): Double = {
     val sorted@(_, headCount) :: _ = m.toList.sortBy(_._1)
