@@ -3,7 +3,9 @@ package sam.aggregations
 import scala.collection.mutable
 
 object DynamicBucketingMedian {
-  def mergeSmallestConsequtive(m: mutable.Map[(Long, Long), Long]): Unit = ???
+  def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
+    m
+  }
 }
 
 import DynamicBucketingMedian._
@@ -24,7 +26,7 @@ class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedi
 
       m += ((e, e) -> 1)
 
-      mergeSmallestConsequtive(m)
+      mergeSmallestConsecutive(m, sizeLimit)
     } else {
       exactMedian.update(e)
     }

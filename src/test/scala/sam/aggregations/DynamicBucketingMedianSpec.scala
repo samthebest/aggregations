@@ -42,43 +42,38 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       median.result must_=== 2
     }
 
-//    "Can get correct answer even compressing 3 points to 2" in {
-//      val median = new DynamicBucketingMedian(2)
-//      (2 to 4).map(_.toLong).foreach(median.update)
-//      median.result must_=== 3
-//    }
+    "Can get correct answer even compressing 3 points to 2" in {
+      val median = new DynamicBucketingMedian(2)
+      (2 to 4).map(_.toLong).foreach(median.update)
+      median.result must_=== 3
+    }
   }
+
+  "mergeSmallestConsecutive" should {
+    import DynamicBucketingMedian._
+
+    "do not mutate the map when is empty" in {
+      val emptyMap = mutable.Map.empty[(Long, Long), Long]
+
+      mergeSmallestConsecutive(emptyMap, 1)
+      emptyMap must_=== mutable.Map.empty[(Long, Long), Long]
+    }
+
+    "do not mutate the map when is smaller than sizeLimit" in {
+      def map = mutable.Map((1l,1l) -> 1l)
+
+      mergeSmallestConsecutive(map, 1) must_=== map
+    }
+
+    "do not mutate the map when is smaller than sizeLimit" in {
+      def map = mutable.Map((1l,1l) -> 1l)
+
+      mergeSmallestConsecutive(map, 1) must_=== map
+    }
+  }
+
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 //"DynamicBucketMedian object" should {
