@@ -47,6 +47,12 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       (2 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 3.0
     }
+
+    "Can get correct answer even compressing 4 points to 2" in {
+      val median = new DynamicBucketingMedian(2)
+      (1 to 4).map(_.toLong).foreach(median.update)
+      median.result must_=== 2.5
+    }
   }
 
   "mergeSmallestConsecutive" should {
