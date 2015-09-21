@@ -91,8 +91,6 @@ import DynamicBucketingMedian._
 
 // Not thread safe
 class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedian] {
-  val exactMedian = new ExactMedian()
-
   def size: Int = m.size
 
   def getMap: Map[(Long, Long), Long] = m.toMap
@@ -100,19 +98,24 @@ class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedi
   private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty
 
   def update(e: Long): Unit = {
-    if (exactMedian.getElems.size == sizeLimit) {
-      exactMedian.getElems.foreach(old => m += ((old, old) -> 1))
 
-      m += ((e, e) -> 1)
+    // TODO REMOVE exactMedian
+//    exactMedian.update(e)
 
-      mergeSmallestConsecutive(m, sizeLimit)
-    } else {
-      exactMedian.update(e)
+    m.find {
+      case ((lower, upper), count) => lower <= e && e <= upper
+    } match {
+      case Some((key, count)) =>
+        m -= key
+        m += key -> (count + 1)
+      case None =>
+        m += ((e, e) -> 1)
+        mergeSmallestConsecutive(m, sizeLimit)
     }
   }
 
   def result: Double =
-    if (m.isEmpty) exactMedian.result
+    if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
     else {
       splitTrivialPairs()
       medianFromDisjointBuckets(m.toMap)
@@ -126,8 +129,9 @@ class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedi
     case _ => ()
   }
 
+  val exactMedian = new ExactMedian()
 
-  def update(m: DynamicBucketingMedian): Unit = exactMedian.update(m.exactMedian)
+  def update(m: DynamicBucketingMedian): Unit = ???
 }
 
 

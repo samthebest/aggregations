@@ -11,6 +11,24 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
 
   "DynamicBucketingMedian" should {
+    "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
+      val median = new DynamicBucketingMedian(1)
+      (1 to 2).map(_.toLong).foreach(median.update)
+      median.size must beLessThanOrEqualTo(1)
+    }
+
+    "getMap correct when created with sizeLimit 1 and updated with 2 distinct elements" in {
+      val median = new DynamicBucketingMedian(1)
+      (1 to 2).map(_.toLong).foreach(median.update)
+      median.getMap must_=== Map((1l, 2l) -> 2l)
+    }
+
+    "Size should not exceed 2 when created with sizeLimit 2 and updated with 3 distinct elements" in {
+      val median = new DynamicBucketingMedian(2)
+      (1 to 3).map(_.toLong).foreach(median.update)
+      median.size must beLessThanOrEqualTo(2)
+    }
+
     "Size should not exceed 10 when created with sizeLimit 10 and updated with 15 distinct elements" in {
       val median = new DynamicBucketingMedian(10)
       (1 to 15).map(_.toLong).foreach(median.update)
@@ -21,13 +39,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       val median = new DynamicBucketingMedian(10)
       (1 to 5).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(10)
-    }
-
-    "exactMedian.getElems.size returns 15 if updated with 10 elements then updated with 5 more elements" in {
-      val median = new DynamicBucketingMedian(10)
-      (1 to 15).map(_.toLong).foreach(median.update)
-      (11 to 15).map(_.toLong).foreach(median.exactMedian.update)
-      median.exactMedian.getElems.size must_=== 15
     }
 
     "getMap returns a map with same size map as size" in {
