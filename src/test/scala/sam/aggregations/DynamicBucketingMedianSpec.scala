@@ -16,8 +16,22 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       (1 to 15).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(10)
     }
-  }
 
+    "Size should return 5 when created with sizeLimit 10 and updated with 5 distinct elements" in {
+      val median = new DynamicBucketingMedian(10)
+      (1 to 5).map(_.toLong).foreach(median.update)
+      median.size must beLessThanOrEqualTo(10)
+    }
+
+    "exactMedian.getElems.size returns 15 if updated with 10 elements then updated with 5 more elements" in {
+      val median = new DynamicBucketingMedian(10)
+      (1 to 15).map(_.toLong).foreach(median.update)
+      (11 to 15).map(_.toLong).foreach(median.exactMedian.update)
+      median.exactMedian.getElems.size must_=== 15
+    }
+
+
+  }
 }
 
 
