@@ -2,8 +2,6 @@ package sam.aggregations
 
 import scala.collection.mutable
 
-
-
 class DynamicBucketingMedianSpec extends MedianSpecUtils {
   def toLongMap(m: mutable.Map[(Int, Int), Int]): mutable.Map[(Long, Long), Long] =
     m.map {
@@ -11,7 +9,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
-
 }
 
 

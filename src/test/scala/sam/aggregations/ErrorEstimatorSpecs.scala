@@ -12,26 +12,27 @@ object StaticSparkContext {
 import StaticSparkContext._
 
 class ErrorEstimatorSpecs extends Specification with Serializable {
-  def mockMedian(fixedResult: Double): Median = new Median {
+
+  case class MockMedian(fixedResult: Double) extends Median[MockMedian] {
     def result: Double = fixedResult
     def update(e: Long): Unit = ()
-    def update(m: Median): Unit = ()
+    def update(m: MockMedian): Unit = ()
   }
 
   "ErrorEstimator" should {
     "Correctly estimate 10% error for mock median" in {
       val numbers = Seq(1, 3, 50, 50, 60, 88).map(_.toLong)
-      ErrorEstimator.relativeError(numbers, mockMedian(55.0)) must_=== 0.1
+      ErrorEstimator.relativeError(numbers, MockMedian(55.0)) must_=== 0.1
     }
 
     "Correctly estimate 5% error for mock median" in {
       val numbers = Seq(1, 3, 50, 50, 60, 88).map(_.toLong)
-      ErrorEstimator.relativeError(numbers, mockMedian(52.5)) must_=== 0.05
+      ErrorEstimator.relativeError(numbers, MockMedian(52.5)) must_=== 0.05
     }
 
     "Correctly estimate 0% error for mock median" in {
       val numbers = Seq(1, 3, 50, 50, 60, 88).map(_.toLong)
-      ErrorEstimator.relativeError(numbers, mockMedian(50.0)) must_=== 0.0
+      ErrorEstimator.relativeError(numbers, MockMedian(50.0)) must_=== 0.0
     }
 
     "Correctly estimate zero error for sampling from a uniform distribution for the ExactMedian" in {
@@ -48,7 +49,7 @@ class ErrorEstimatorSpecs extends Specification with Serializable {
 
     "Produce single report for single common key RDD" in {
       val singleKeyRDD = staticSc.makeRDD(Seq(1, 3, 50, 50, 60, 88).map(i => ("common-key", i.toLong)))
-      ErrorEstimator.fromTestData(singleKeyRDD, i => mockMedian(55.0), memoryCap = 3) must_===
+      ErrorEstimator.fromTestData(singleKeyRDD, i => MockMedian(55.0), memoryCap = 3) must_===
         Report(List((0.1, 6)), 0.1, 0.1, 0.1, 6, 6, 6)
     }
 
@@ -57,7 +58,7 @@ class ErrorEstimatorSpecs extends Specification with Serializable {
         Seq(1, 3, 50, 50, 60, 88).map(i => ("common-key-1", i.toLong)) ++
           Seq(1, 3, 50).map(i => ("common-key-2", i.toLong))
       )
-      ErrorEstimator.fromTestData(singleKeyRDD, i => mockMedian(55.0), memoryCap = 3) must_===
+      ErrorEstimator.fromTestData(singleKeyRDD, i => MockMedian(55.0), memoryCap = 3) must_===
         Report(List((0.1, 6)), 0.1, 0.1, 0.1, 6, 6, 6)
     }
 
@@ -67,7 +68,7 @@ class ErrorEstimatorSpecs extends Specification with Serializable {
           Seq(1, 3, 5, 100, 100, 609, 898, 999).map(i => ("common-key-2", i.toLong)) ++
           Seq(1, 3, 50).map(i => ("common-key-3", i.toLong))
       )
-      ErrorEstimator.fromTestData(singleKeyRDD, i => mockMedian(55.0), memoryCap = 3) must_===
+      ErrorEstimator.fromTestData(singleKeyRDD, i => MockMedian(55.0), memoryCap = 3) must_===
         Report(
           errorsAndNumExamples = List((0.1, 6), (0.45, 8)),
           averageError = 0.275,

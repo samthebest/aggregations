@@ -25,7 +25,7 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
 
 object ErrorEstimator {
   def fromTestData[T: ClassTag](testData: RDD[(T, Long)],
-                                medianFac: Int => Median = _ => new ExactMedian(),
+                                medianFac: Int => Median[_] = _ => new ExactMedian(),
                                 memoryCap: Int = 1000): Report = {
     val errorsAndNumExamples =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
@@ -61,9 +61,9 @@ object ErrorEstimator {
     }
   }
 
-  def normalDistribution(median: Median, n: Int, max: Int): Double = relativeError(normalishSample(n, max), median)
+  def normalDistribution(median: Median[_], n: Int, max: Int): Double = relativeError(normalishSample(n, max), median)
 
-  def uniformDistribution(median: Median, n: Int, max: Int): Double =
+  def uniformDistribution(median: Median[_], n: Int, max: Int): Double =
     relativeError((1 to n).map(_ => rand.nextInt(max).toLong), median)
 
   def correctMedian(numbers: Seq[Long]): Double = {
@@ -72,7 +72,7 @@ object ErrorEstimator {
     exactMedian.result
   }
 
-  def relativeError(numbers: Seq[Long], median: Median): Double = {
+  def relativeError(numbers: Seq[Long], median: Median[_]): Double = {
     val correct = correctMedian(numbers)
     numbers.foreach(median.update)
     val medianEstimate = median.result

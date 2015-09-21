@@ -1,6 +1,6 @@
 package sam.aggregations
 
-class ExactMedian() extends Median {
+class ExactMedian() extends Median[ExactMedian] {
   private var elems: List[Long] = Nil
   def getElems: List[Long] = elems
   def result: Double = elems match {
@@ -12,7 +12,5 @@ class ExactMedian() extends Median {
   }
 
   def update(e: Long): Unit = elems = e +: elems
-  def update(m: Median): Unit = m match {
-    case em: ExactMedian => elems = elems ++ em.getElems
-  }
+  def update(m: ExactMedian): Unit = elems = elems ++ m.getElems
 }
