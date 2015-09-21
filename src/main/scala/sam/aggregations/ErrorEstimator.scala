@@ -25,15 +25,34 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
 
 object ErrorEstimator {
   // TODO Wrong - we ought to be using combineByKey, not groupBy and mapValues
-  def fromTestData[T: ClassTag](testData: RDD[(T, Long)],
-                                medianFac: Int => Median[_] = _ => new ExactMedian(),
+  def fromTestData[T: ClassTag, M <: Median[M]](testData: RDD[(T, Long)],
+                                medianFac: Int => M,
                                 memoryCap: Int = 1000): Report = {
-    val errorsAndNumExamples =
+    val errorsAndNumExamples: List[(Double, Int)] = ???
+    val estimates: RDD[(T, Double)] =
+      testData.combineByKey(
+        createCombiner = (l: Long) => {
+          val m = medianFac(memoryCap)
+          m.update(l)
+          m
+        },
+        mergeValue = (m: M, l: Long) => {
+          m.update(l)
+          m
+        },
+        mergeCombiners = (m1: M, m2: M) => {
+          m1.update(m2)
+          m1
+        },
+        numPartitions = 500
+      )
+      .mapValues(_.result)
+
+    val correctMedianAndCounts: RDD[(T, (Double, Int))] =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
         case (t, data) if data.length <= memoryCap => None
-        case (t, data) => Some((relativeError(data, medianFac(memoryCap)), data.length))
+        case (t, data) => Some((t, (correctMedian(data), data.length)))
       }
-      .collect().toList
 
     val (errors, numExamples) = errorsAndNumExamples.unzip
 

@@ -131,7 +131,6 @@ class MedianSpecUtils extends Specification with ScalaCheck {
     }
   }
 
-
   def medianProperties[T <: Median[T]](memCappedFac: Int => T): Unit =
     "Median aggregator properties" should {
       "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {
