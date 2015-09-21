@@ -32,7 +32,8 @@ object ErrorEstimatorFromDataApp {
         testData = sc.textFile(testDataPath).map(_.split("\t").toList).map {
           case key :: value :: Nil => (key, value.toLong)
         },
-        medianFac = (i: Int) => DynamicBucketingMedian(i),
+        medianFac = (i: Int) => new DynamicBucketingMedian(i),
+        // TODO Paramarameriseify
         memoryCap = 100
       )
 
@@ -47,5 +48,6 @@ object ErrorEstimatorFromDataApp {
     }
   }
 
-  def acceptanceTest(report: Report): Boolean = report.worstError < 0.03 && report.averageError < 0.02
+  // TODO Paramarameriseify
+  def acceptanceTest(report: Report): Boolean = report.worstError <= 0.01 && report.averageError <= 0.01
 }

@@ -11,8 +11,8 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
   implicit def toProp(m: MatchResult[Any]): Prop = resultProp(m)
 
-  def basicMedianSpecs(fac: () => Median): Unit =
-    "Median aggregator" should {
+  def basicMedianSpecs(fac: () => Median, desc: String = "ExactMedian"): Unit =
+    "Median aggregator " + desc should {
       "Throw exception when called with no update ever being called" in {
         val median: Median = fac()
         Try(median.result) match {
