@@ -30,7 +30,23 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       median.exactMedian.getElems.size must_=== 15
     }
 
+    "getMap returns a map with same size map as size" in {
+      val median = new DynamicBucketingMedian(2)
+      (1 to 3).map(_.toLong).foreach(median.update)
+      median.getMap.size must_=== median.size
+    }
 
+    "Can get correct answer even compressing 3 points to 2" in {
+      val median = new DynamicBucketingMedian(2)
+      (1 to 3).map(_.toLong).foreach(median.update)
+      median.result must_=== 2
+    }
+
+//    "Can get correct answer even compressing 3 points to 2" in {
+//      val median = new DynamicBucketingMedian(2)
+//      (2 to 4).map(_.toLong).foreach(median.update)
+//      median.result must_=== 3
+//    }
   }
 }
 

@@ -1,16 +1,40 @@
 package sam.aggregations
 
+import scala.collection.mutable
+
+object DynamicBucketingMedian {
+  def mergeSmallestConsequtive(m: mutable.Map[(Long, Long), Long]): Unit = ???
+}
+
+import DynamicBucketingMedian._
+
+// Not thread safe
 class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedian] {
   val exactMedian = new ExactMedian()
 
-  def size: Int = math.min(exactMedian.getElems.size, sizeLimit)
+  def size: Int = m.size
+
+  def getMap: Map[(Long, Long), Long] = m.toMap
+
+  private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty
 
   def update(e: Long): Unit = {
     if (exactMedian.getElems.size == sizeLimit) {
-      
-    } else exactMedian.update(e)
+      exactMedian.getElems.foreach(old => m += ((old, old) -> 1))
+
+      m += ((e, e) -> 1)
+
+      mergeSmallestConsequtive(m)
+    } else {
+      exactMedian.update(e)
+    }
   }
-  def result: Double = exactMedian.result
+
+  def result: Double = if (m.isEmpty) exactMedian.result else {
+    val keys = m.keySet.toList.sorted.map(_._1)
+    keys(keys.size / 2)
+  }
+
   def update(m: DynamicBucketingMedian): Unit = exactMedian.update(m.exactMedian)
 }
 
