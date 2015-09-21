@@ -1,6 +1,8 @@
 package sam.aggregations
 
-class DynamicBucketingMedian(mapSizeLimit: Int) extends Median[DynamicBucketingMedian] {
+class DynamicBucketingMedian(sizeLimit: Int) extends Median[DynamicBucketingMedian] {
+  def size: Int = exactMedian.getElems.size
+
   val exactMedian = new ExactMedian()
   def update(e: Long): Unit = exactMedian.update(e)
   def result: Double = exactMedian.result

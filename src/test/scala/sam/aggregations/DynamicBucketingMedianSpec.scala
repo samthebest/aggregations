@@ -9,6 +9,15 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
+
+  "DynamicBucketingMedian" should {
+    "Size should not exceed 10 when created with sizeLimit 10 and updated with 15 distinct elements" in {
+      val median = new DynamicBucketingMedian(10)
+      (1 to 15).map(_.toLong).foreach(median.update)
+      median.size must beLessThanOrEqualTo(10)
+    }
+  }
+
 }
 
 
