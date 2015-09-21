@@ -9,6 +9,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
+  exactResultMedianSpecs(i => new DynamicBucketingMedian(i))
 
   "DynamicBucketingMedian" should {
     "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
@@ -70,6 +71,18 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       (1 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 2.5
     }
+
+    "Can get correct answer based on regression test 1" in {
+      val median = new DynamicBucketingMedian(7)
+      List(4l, 10l, 5l, 10l).foreach(median.update)
+      median.result must_=== 7.5
+    }
+
+    "Can get correct map based on regression test 1" in {
+      val median = new DynamicBucketingMedian(7)
+      List(4l, 10l, 5l, 10l).foreach(median.update)
+      median.getMap must_=== Map((4l, 4l) -> 1l, (10l, 10l) -> 2l, (5l, 5l) -> 1l)
+    }
   }
 
   "mergeSmallestConsecutive" should {
@@ -77,7 +90,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
     "do not mutate the map when is empty" in {
       val emptyMap = mutable.Map.empty[(Long, Long), Long]
-
       mergeSmallestConsecutive(emptyMap, 1)
       emptyMap must_=== mutable.Map.empty[(Long, Long), Long]
     }
@@ -85,7 +97,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     "do not mutate the map when is smaller or equals than sizeLimit" in {
       "and have only one key" in {
         def map = mutable.Map((1l, 1l) -> 1l)
-
         mergeSmallestConsecutive(map, 1) must_=== map
       }
 
@@ -270,15 +281,5 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
         (100l, 100l) -> 22l)) must_=== 55.0
     }
-
-
-    //    "Sams really hard one" in {
-    //      medianFromDisjointBuckets(Map(
-    //        (0l, 0l) -> 10l,
-    //        (1l, 1l) -> 30l,
-    //        (5l, 55l) -> 1l,
-    //        (56l, 66l) ->
-    //      )) must_=== 1.0
-    //    }
   }
 }

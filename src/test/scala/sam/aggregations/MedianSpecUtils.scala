@@ -108,13 +108,39 @@ class MedianSpecUtils extends Specification with ScalaCheck {
         median.result must_=== 60.0
       }
 
+    }
+
+  def exactResultMedianSpecs[T <: Median[T]](fac: Int => T): Unit = {
+    "Median" should {
+      implicit val arbitraryParams: Arbitrary[(Int, Int, Int)] = Arbitrary(
+        for {
+          limit <- Gen.frequency((1, 10), (1, 20), (1, 50))
+          n <- Gen.choose(5, limit)
+          max <- Gen.choose(5, 500)
+        } yield (limit, n, max)
+      )
+
+      "Give correct answer for Normal dist when number of examples is less than limit" ! check(
+        (params: (Int, Int, Int)) => (params.productIterator.forall(_.asInstanceOf[Int] > 0) &&
+          params._2 <= params._1) ==> (params match {
+          case (limit, n, max) =>
+            val median = fac(limit)
+            ErrorEstimator.normalDistribution(median, n, max) must_=== 0.0
+        })
+      )
+    }
+  }
+
+
+  def medianProperties[T <: Median[T]](memCappedFac: Int => T): Unit =
+    "Median aggregator properties" should {
       "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {
-        val median = fac()
+        val median = memCappedFac(10)
         median.update(55L)
         median.update(456L)
         median.update(4L)
 
-        val median2 = fac()
+        val median2 = memCappedFac(10)
         median2.update(5L)
         median2.update(999L)
         median2.update(65L)
@@ -123,10 +149,7 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
         median.result must_=== 60.0
       }
-    }
 
-  def medianProperties[T <: Median[T]](memCappedFac: Int => T): Unit =
-    "Median aggregator properties" should {
       val bigMemCap = 500
       val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
       implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
