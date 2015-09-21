@@ -24,11 +24,9 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
 }
 
 object ErrorEstimator {
-  // TODO Wrong - we ought to be using combineByKey, not groupBy and mapValues
   def fromTestData[T: ClassTag, M <: Median[M]](testData: RDD[(T, Long)],
-                                medianFac: Int => M,
-                                memoryCap: Int = 1000): Report = {
-    val errorsAndNumExamples: List[(Double, Int)] = ???
+                                                medianFac: Int => M,
+                                                memoryCap: Int = 1000): Report = {
     val estimates: RDD[(T, Double)] =
       testData.combineByKey(
         createCombiner = (l: Long) => {
@@ -53,6 +51,12 @@ object ErrorEstimator {
         case (t, data) if data.length <= memoryCap => None
         case (t, data) => Some((t, (correctMedian(data), data.length)))
       }
+
+    val errorsAndNumExamples: List[(Double, Int)] =
+      estimates.join(correctMedianAndCounts).map {
+        case (_, (estimate, (correct, count))) => (relativeError(estimate, correct), count)
+      }
+      .collect().toList
 
     val (errors, numExamples) = errorsAndNumExamples.unzip
 
@@ -93,10 +97,9 @@ object ErrorEstimator {
   }
 
   def relativeError(numbers: Seq[Long], median: Median[_]): Double = {
-    val correct = correctMedian(numbers)
     numbers.foreach(median.update)
-    val medianEstimate = median.result
-    val absaluteError = math.abs(correct - medianEstimate)
-    absaluteError / correct
+    relativeError(median.result, correctMedian(numbers))
   }
+
+  def relativeError(estimate: Double, correct: Double): Double = math.abs(correct - estimate) / correct
 }

@@ -2,11 +2,18 @@ package sam.aggregations
 
 import org.apache.spark.{SparkContext, SparkConf}
 
+import scala.util.Random
+
 // TODO A similar one for Normal and Uniform
 object ErrorEstimatorFromDataApp {
   def main(args: Array[String]): Unit = {
-    // Use Scallop when this gets more complicated
-    val testDataPath = args.headOption.getOrElse("/user/savagesa/median-test-data")
+    // Use Scallop when args gets more complicated
+
+    //val testDataPath = args.headOption.getOrElse("/user/savagesa/median-test-data")
+    val testDataPath = args(0)
+    val memory = args(1).toInt
+
+    def acceptanceTest(report: Report): Boolean = report.worstError <= 2.0 / memory && report.averageError <= 1.0 / memory
 
     val confMap =
       Map(
@@ -29,12 +36,13 @@ object ErrorEstimatorFromDataApp {
 
     val report =
       ErrorEstimator.fromTestData(
-        testData = sc.textFile(testDataPath).map(_.split("\t").toList).map {
-          case key :: value :: Nil => (key, value.toLong)
-        },
+        testData =
+          sc.textFile(testDataPath).map(_.split("\t").toList).map {
+            case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong))
+          }
+          .groupByKey().flatMap(_._2),
         medianFac = (i: Int) => new DynamicBucketingMedian(i),
-        // TODO Paramarameriseify
-        memoryCap = 100
+        memoryCap = memory
       )
 
     println("report:\n" + report.pretty)
@@ -47,7 +55,4 @@ object ErrorEstimatorFromDataApp {
       System.exit(1)
     }
   }
-
-  // TODO Paramarameriseify
-  def acceptanceTest(report: Report): Boolean = report.worstError <= 0.01 && report.averageError <= 0.01
 }
