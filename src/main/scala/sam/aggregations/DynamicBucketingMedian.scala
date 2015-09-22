@@ -54,9 +54,12 @@ object DynamicBucketingMedian {
       case ((lower, upper), n) if lower == upper => List((lower, lower) -> n.toDouble)
       case ((lower, upper), 2l) if upper == lower + 1 => List((lower, lower) -> 1.0, (upper, upper) -> 1.0)
       case ((lower, upper), 2l) => List((lower, lower) -> 1.0, (lower + 1, upper - 1) -> 0.0, (upper, upper) -> 1.0)
+      case ((lower, upper), n) =>
+        val extraMass = (n - 2).toDouble / (upper + 1 - lower)
+        List((lower, lower) -> (1.0 + extraMass), (lower + 1, upper - 1) -> extraMass, (upper, upper) -> (1.0 + extraMass))
     }
 
-    println("splitted = " + splitted)
+//    println("splitted = " + splitted)
 
     // This needs to be recursive to catch the cases when we have multiple overlaying ones
 
@@ -87,7 +90,7 @@ object DynamicBucketingMedian {
 
     }
 
-    println("disjoint = " + disjoint)
+//    println("disjoint = " + disjoint)
 
     disjoint.groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1)
 

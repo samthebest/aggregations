@@ -365,6 +365,14 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )
     }
 
-
+    "Turn spread out pair into density correctly with greater than 2 counts" in {
+      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)) must_=== List(
+        (0l, 0l) -> (1.0 + 2.0 / 5),
+        (1l, 3l) -> (0.0 + 2.0 / 5),
+        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
+        (5l, 6l) -> (0.0 + 2.0 / 4),
+        (7l, 7l) -> (1.0 + 2.0 / 4)
+      )
+    }
   }
 }
