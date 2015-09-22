@@ -30,5 +30,13 @@ class RangeUtilsSpec extends Specification {
     "Return true for entirely covered range (0, 7), (1, 4)" in {
       overlap((0, 7), (1, 4)) must beTrue
     }
+
+    "Return true for (7, 7), (7, 7)" in {
+      overlap((7, 7), (7, 7)) must beTrue
+    }
+
+    "Return true for (7, 8), (7, 7)" in {
+      overlap((7, 8), (7, 7)) must beTrue
+    }
   }
 }

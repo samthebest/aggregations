@@ -4,7 +4,7 @@ import scala.collection.mutable
 import RangeUtils._
 
 object DynamicBucketingMedian {
-  // Assumes disjoint
+  // Core of the algorithm, this has the potential for a lot of variations
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
     if (m.size <= sizeLimit) m
     else {
@@ -34,22 +34,89 @@ object DynamicBucketingMedian {
 
   case class CumDisjoint(lower: Long, upper: Long, count: Long, cumCount: Long) extends CumulatativeCount
   case class CumOverlapping(lower: Long, upper: Long, count: Long, cumCount: Long,
-                            distribution: Map[(Long, Long), Double]) extends CumulatativeCount
+                            distribution: List[((Long, Long), Double)]) extends CumulatativeCount
 
-  def mergeOverlappingInfo(sortedMap: List[((Long, Long), Long)]): List[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))] =
-    sortedMap.foldLeft(List.empty[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))]) {
+  def divideDensity(lower: Long, upper: Long, newLowerPart: Long, newUpperPart: Long, origDensity: Double): Double = {
+    val origRange = upper + 1 - lower
+    val newRange = newUpperPart + 1 - newLowerPart
+    val proportion = newRange.toDouble / origRange.toDouble
+    proportion * origDensity
+  }
+
+  def splitRange(range: Long2, newLowerPart: Long, newUpperPart: Long, origDensity: Double): ((Long, Long), Double) =
+    ((newLowerPart, newUpperPart), divideDensity(range._1, range._2, newLowerPart, newUpperPart, origDensity))
+
+  // Method to turn the count map into a distribution
+  def countMapToDensity(m: List[((Long, Long), Long)]): List[((Long, Long), Double)] = {
+    // Split each into a density range
+
+    val splitted = m.flatMap {
+      case ((lower, upper), n) if lower == upper => List((lower, lower) -> n.toDouble)
+      case ((lower, upper), 2l) if upper == lower + 1 => List((lower, lower) -> 1.0, (upper, upper) -> 1.0)
+      case ((lower, upper), 2l) => List((lower, lower) -> 1.0, (lower + 1, upper - 1) -> 0.0, (upper, upper) -> 1.0)
+    }
+
+    println("splitted = " + splitted)
+
+    // This needs to be recursive to catch the cases when we have multiple overlaying ones
+
+    val disjoint = splitted.sortBy(_._1._1).flatMap {
+      case pt@(r1@(lower, upper), origDensity) =>
+        // Take each other range and split this according to it until we run out
+        val overlapping = splitted.takeWhile(p => overlap(r1, p._1))
+        if (overlapping.nonEmpty)
+          overlapping.flatMap {
+            case (r2@(otherLower, otherUpper), density) if r1 == r2 => List(pt)
+            case (r2@(otherLower, otherUpper), density) if otherLower <= lower && otherUpper > upper => List(pt)
+            case (r2@(otherLower, otherUpper), density) if otherLower == lower =>
+              List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
+
+            case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper >= upper =>
+              List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, upper, origDensity))
+
+            case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper < upper =>
+              List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, otherUpper, origDensity),
+                splitRange(r1, otherUpper + 1, upper, origDensity))
+
+            case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper < upper =>
+              List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
+          }
+          .distinct
+        else
+          List(pt)
+
+    }
+
+    println("disjoint = " + disjoint)
+
+    disjoint.groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1)
+
+  }
+
+
+  // Method to approximate the median based on the index within the distribution
+  // (easy way to test is using large spikes)
+
+  type Long2 = (Long, Long)
+
+  def mergeOverlappingInfo(sortedMap: List[(Long2, Long)]): List[(Long2, (Long, Option[List[(Long2, Long)]]))] =
+    sortedMap.foldLeft(List.empty[((Long, Long), (Long, Option[List[((Long, Long), Long)]]))]) {
       case ((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest, (r2@(lower, upper), count)) if overlap(r1, r2) =>
         ((math.min(lowerPrev, lower), math.max(upperPrev, upper)),
-          (count + countPrev, Some(Map(r1 -> countPrev, r2 -> count)))) +: rest
+          (count + countPrev, Some(List(r2 -> count, r1 -> countPrev)))) +: rest
 
       case ((r1@(lowerPrev, upperPrev), (countPrev, Some(m))) :: rest, (r2@(lower, upper), count)) if overlap(r1, r2) =>
-        ((math.min(lowerPrev, lower), math.max(upperPrev, upper)), (count + countPrev, Some(m + (r2 -> count)))) +: rest
+        ((math.min(lowerPrev, lower), math.max(upperPrev, upper)), (count + countPrev, Some((r2 -> count) +: m))) +: rest
 
       case (cum@((r1, (_, None)) :: _), (r2, count)) if !overlap(r1, r2) =>
         (r2, (count, None)) +: cum
 
       case (cum, (range, count)) =>
         (range, (count, None)) +: cum
+    }
+    .map {
+      case (r, (count, Some(m))) => (r, (count, Some(m.reverse)))
+      case other => other
     }
     .reverse
 
@@ -63,7 +130,7 @@ object DynamicBucketingMedian {
           CumDisjoint(lower, upper, count, cumCount)
         case (((lower, upper), (count, Some(map))), cumCount) =>
           CumDisjoint(lower, upper, count, cumCount)
-//          CumOverlapping(lower, upper, count, cumCount, Map.empty)
+        //          CumOverlapping(lower, upper, count, cumCount, Map.empty)
       }
 
     // Produce cumCounts as before

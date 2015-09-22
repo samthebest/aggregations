@@ -1,4 +1,4 @@
-val companyName = "sceval"
+val companyName = "aggregations"
 val domain = "sam"
 
 val mavenRepo: String = "maven." + companyName + "." + domain
@@ -56,7 +56,7 @@ javaOptions ++= Seq("-target", "1.8", "-source", "1.8")
 
 organization := domain + "." + companyName
 
-name := "sceval"
+name := "aggregations"
 
 parallelExecution in Test := false
 
