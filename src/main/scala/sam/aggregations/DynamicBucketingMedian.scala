@@ -36,35 +36,24 @@ object DynamicBucketingMedian {
   case class CumOverlapping(lower: Long, upper: Long, count: Long, cumCount: Long,
                             distribution: Map[(Long, Long), Double]) extends CumulatativeCount
 
-  def mergeOverlappingInfo(sortedMap: List[((Long, Long), Long)]): List[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))] = {
-    val empty = List.empty[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))]
-    sortedMap.foldLeft(empty) {
-      case ((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest, (r2@(lower, upper), count))
-        if rangesOverlap(r1, r2) =>
+  def mergeOverlappingInfo(sortedMap: List[((Long, Long), Long)]): List[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))] =
+    sortedMap.foldLeft(List.empty[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))]) {
+      case ((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest, (r2@(lower, upper), count)) if overlap(r1, r2) =>
+        ((math.min(lowerPrev, lower), math.max(upperPrev, upper)),
+          (count + countPrev, Some(Map(r1 -> countPrev, r2 -> count)))) +: rest
 
-        val mergedRange = (math.min(lowerPrev, lower), math.max(upperPrev, upper))
-        val map = Map(r1 -> countPrev, r2 -> count)
-        (mergedRange, (count + countPrev, Some(map))) +: rest
+      case ((r1@(lowerPrev, upperPrev), (countPrev, Some(m))) :: rest, (r2@(lower, upper), count)) if overlap(r1, r2) =>
+        ((math.min(lowerPrev, lower), math.max(upperPrev, upper)), (count + countPrev, Some(m + (r2 -> count)))) +: rest
 
-      case ((r1@(lowerPrev, upperPrev), (countPrev, Some(m))) :: rest, (r2@(lower, upper), count))
-        if rangesOverlap(r1, r2) =>
-
-        val mergedRange = (math.min(lowerPrev, lower), math.max(upperPrev, upper))
-        val map = m + (r2 -> count)
-        (mergedRange, (count + countPrev, Some(map))) +: rest
-
-      case (cum@((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest), (r2@(lower, upper), count))
-        if !rangesOverlap(r1, r2) =>
-
+      case (cum@((r1, (_, None)) :: _), (r2, count)) if !overlap(r1, r2) =>
         (r2, (count, None)) +: cum
 
       case (cum, (range, count)) =>
         (range, (count, None)) +: cum
     }
     .reverse
-  }
 
-  def medianFromDisjointBuckets(m: Map[(Long, Long), Long]): Double = {
+  def medianFromBuckets(m: Map[(Long, Long), Long]): Double = {
     val overlapsMerged@(_, (headCount, _)) :: _ = mergeOverlappingInfo(m.toList.sortBy(_._1))
 
     val cumulativeCounts: List[CumulatativeCount] =
@@ -138,7 +127,7 @@ case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Lo
 
   def result: Double =
     if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
-    else medianFromDisjointBuckets(m.toMap)
+    else medianFromBuckets(m.toMap)
 
   def update(other: DynamicBucketingMedian): Unit = {
     other.getMap.foreach {

@@ -1,7 +1,7 @@
 package sam.aggregations
 
 object RangeUtils {
-  def rangesOverlap[T : Numeric](r1: (T, T), r2: (T, T)): Boolean = {
+  def overlap[T : Numeric](r1: (T, T), r2: (T, T)): Boolean = {
     val num = implicitly[Numeric[T]]
     import num.mkOrderingOps
 
