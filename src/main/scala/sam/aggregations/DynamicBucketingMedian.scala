@@ -65,26 +65,23 @@ object DynamicBucketingMedian {
   }
 
   def medianFromDisjointBuckets(m: Map[(Long, Long), Long]): Double = {
-    val sorted@(_, headCount) :: _ = m.toList.sortBy(_._1)
+    val overlapsMerged@(_, (headCount, _)) :: _ = mergeOverlappingInfo(m.toList.sortBy(_._1))
 
-    // Merge overlapping info
-
-    val overlapsMerged@(_, (headCount2, _)) :: _ = mergeOverlappingInfo(sorted)
-
-    overlapsMerged.zip(overlapsMerged.drop(1).scanLeft(headCount2)((cum, cur) => cum + cur._2._1))
-    .map {
-      case (((lower, upper), (count, None)), cumCount) => CumDisjoint(lower, upper, count, cumCount)
-      case (((lower, upper), (count, Some(map))), cumCount) => CumOverlapping(lower, upper, count, cumCount, Map.empty)
-    }
+    val cumulativeCounts: List[CumulatativeCount] =
+      overlapsMerged.zip(overlapsMerged.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2._1))
+      .map {
+        case (((lower, upper), (count, None)), cumCount) => CumDisjoint(lower, upper, count, cumCount)
+        case (((lower, upper), (count, Some(map))), cumCount) => CumOverlapping(lower, upper, count, cumCount, Map.empty)
+      }
 
     // Produce cumCounts as before
 
     // bucket, totalUpToAndIncludingBucket
-    val cumulativeCounts: List[CumulatativeCount] =
-      sorted.zip(sorted.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2))
-      .map {
-        case (((lower, upper), count), cumCount) => CumDisjoint(lower, upper, count, cumCount)
-      }
+    //    val cumulativeCounts: List[CumulatativeCount] =
+    //      sorted.zip(sorted.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2))
+    //      .map {
+    //        case (((lower, upper), count), cumCount) => CumDisjoint(lower, upper, count, cumCount)
+    //      }
 
     cumulativeCounts.last.cumCount match {
       case odd if odd % 2 == 1 =>
