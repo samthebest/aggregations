@@ -1,5 +1,7 @@
 package sam.aggregations
 
+import sam.aggregations.DynamicBucketingMedian._
+
 import scala.collection.mutable
 
 class DynamicBucketingMedianSpec extends MedianSpecUtils {
@@ -9,7 +11,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
-  exactResultMedianSpecs(i => new DynamicBucketingMedian(i))
+  sufficientMemoryProperties(i => new DynamicBucketingMedian(i))
 
   "DynamicBucketingMedian" should {
     "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
@@ -85,6 +87,18 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
   }
 
+//  "Merge update" should {
+//
+//
+//    "Correctly merges" in {
+//      val median = new DynamicBucketingMedian(2)
+//      List(4l, 10l, 5l, 10l).foreach(median.update)
+//
+//      def map = mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
+//      mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 6l) -> 20l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
+//    }
+//  }
+
   "mergeSmallestConsecutive" should {
     import DynamicBucketingMedian._
 
@@ -102,35 +116,29 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
       "and have 2 keys" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-
         mergeSmallestConsecutive(map, 2) must_=== map
       }
 
       "and have multiple keys" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l, (4l, 4l) -> 1l, (5l, 5l) -> 1l)
-
         mergeSmallestConsecutive(map, 5) must_=== map
       }
     }
 
     "mutate in-place the specified mutable map" in {
       val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-
       mergeSmallestConsecutive(map, 1)
-
       map must_=== mutable.Map((1l, 2l) -> 2l)
     }
 
     "return the specified mutable map" in {
       "when mutating" in {
         val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-
         mergeSmallestConsecutive(map, 1).equals(map.asInstanceOf[Any]) must_=== true
       }
 
       "when not mutating" in {
         val map = mutable.Map((1l, 1l) -> 1l)
-
         mergeSmallestConsecutive(map, 1).equals(map.asInstanceOf[Any]) must_=== true
       }
     }
@@ -138,28 +146,23 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     "merge the two consecutive pairs with the smallest joint size" in {
       "when there are 2 buckets with limit of 1" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-
         mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 2l) -> 2l)
       }
 
       "when there are 3 buckets with limit of 1" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l)
-
         mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 3l) -> 3l)
       }
 
       "when there are 3 buckets with limit of 2" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l)
-
         mergeSmallestConsecutive(map, 2) must_=== mutable.Map((1l, 2l) -> 2l, (3l, 3l) -> 1)
       }
 
       "when there are 7 unit buckets with limit of 1 with different counts but without gaps" in {
         def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 10l, (3l, 3l) -> 9l, (4l, 4l) -> 5l, (5l, 5l) -> 24l,
           (6l, 6l) -> 1l, (7l, 7l) -> 18l)
-
         val sum = map.values.sum
-
         mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 7l) -> sum)
       }
 
@@ -192,25 +195,15 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
         mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 3l) -> 20l, (14l, 16l) -> 29l, (22l, 32l) -> 22l)
       }
 
+      "when 2 overlapping" in {
+        def map = mutable.Map((1l, 2l) -> 11l, (2l, 3l) -> 9l)
+        mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 3l) -> 20l)
+      }
 
-
-      //      "when 2 overlapping" in {
-      //        def map = mutable.Map((1l, 2l) -> 11l, (2l, 3l) -> 9l)
-      //
-      //        mergeSmallestConsecutive(map, 1) must_=== mutable.Map((1l, 3l) -> 20l)
-      //      }
-      //
-      //      "when 3 overlapping with limit 2" in {
-      //        def map = mutable.Map((1l, 2l) -> 11l, (2l, 10l) -> 9l, (4l, 16l) -> 22l)
-      //
-      //        mergeSmallestConsecutive(map, 2) must_=== mutable.Map((1l, 10l) -> 20l, (4l, 16l) -> 22l)
-      //      }
-      //
-      //      "when 3 overlapping with limit 2" in {
-      //        def map = mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
-      //
-      //        mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 4l) -> 7l)
-      //      }
+      "when 3 overlapping with limit 2" in {
+        def map = mutable.Map((1l, 2l) -> 11l, (2l, 10l) -> 9l, (4l, 16l) -> 22l)
+        mergeSmallestConsecutive(map, 2) must_=== mutable.Map((1l, 10l) -> 20l, (4l, 16l) -> 22l)
+      }
     }
   }
 

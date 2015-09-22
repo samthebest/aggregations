@@ -85,5 +85,9 @@ case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Lo
     else medianFromDisjointBuckets(m.toMap)
 
   // A very simple implementation would be to sample from the right hand side semi-uniformly
-  def update(m: DynamicBucketingMedian): Unit = ???
+
+
+  def update(other: DynamicBucketingMedian): Unit = other.getMap.foreach {
+    case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
+  }
 }

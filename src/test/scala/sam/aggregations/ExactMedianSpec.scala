@@ -4,5 +4,5 @@ class ExactMedianSpec extends MedianSpecUtils {
   sequential
 
   basicMedianSpecs(() => new ExactMedian())
-  medianProperties((_: Int) => new ExactMedian())
+  medianIsCommutative((_: Int) => new ExactMedian())
 }

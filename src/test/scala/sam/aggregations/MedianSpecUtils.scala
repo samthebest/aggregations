@@ -110,8 +110,8 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
     }
 
-  def exactResultMedianSpecs[T <: Median[T]](fac: Int => T): Unit = {
-    "Median" should {
+  def sufficientMemoryProperties[T <: Median[T]](memCappedFac: Int => T): Unit = {
+    "median with sufficient memory 1" should {
       implicit val arbitraryParams: Arbitrary[(Int, Int, Int)] = Arbitrary(
         for {
           limit <- Gen.frequency((1, 10), (1, 20), (1, 50))
@@ -124,15 +124,10 @@ class MedianSpecUtils extends Specification with ScalaCheck {
         (params: (Int, Int, Int)) => (params.productIterator.forall(_.asInstanceOf[Int] > 0) &&
           params._2 <= params._1) ==> (params match {
           case (limit, n, max) =>
-            val median = fac(limit)
+            val median = memCappedFac(limit)
             ErrorEstimator.normalDistribution(median, n, max) must_=== 0.0
-        })
-      )
-    }
-  }
-
-  def medianProperties[T <: Median[T]](memCappedFac: Int => T): Unit =
-    "Median aggregator properties" should {
+        }))
+      
       "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {
         val median = memCappedFac(10)
         median.update(55L)
@@ -148,7 +143,9 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
         median.result must_=== 60.0
       }
-
+    }
+    
+    "median with sufficient memory 2" should {
       val bigMemCap = 500
       val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
       implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
@@ -202,6 +199,21 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
           median1.result must_=== median.result
         })
+    }
+  }
+
+  def medianIsCommutative[T <: Median[T]](memCappedFac: Int => T): Unit =
+    "Median" should {
+      val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
+      implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
+        (1, Gen.listOfN(1, longGen)),
+        (1, Gen.listOfN(2, longGen)),
+        (1, Gen.listOfN(3, longGen)),
+        (1, Gen.listOfN(5, longGen)),
+        (1, Gen.listOfN(10, longGen)),
+        (1, Gen.listOfN(25, longGen)),
+        (1, Gen.listOfN(50, longGen))
+      ))
 
       "Order not important even with small cap (i.e. is commutative)" ! check((l1: List[Long], l2: List[Long]) =>
         (l1.nonEmpty && l2.nonEmpty) ==> {
