@@ -70,8 +70,11 @@ object DynamicBucketingMedian {
     val cumulativeCounts: List[CumulatativeCount] =
       overlapsMerged.zip(overlapsMerged.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2._1))
       .map {
-        case (((lower, upper), (count, None)), cumCount) => CumDisjoint(lower, upper, count, cumCount)
-        case (((lower, upper), (count, Some(map))), cumCount) => CumOverlapping(lower, upper, count, cumCount, Map.empty)
+        case (((lower, upper), (count, None)), cumCount) =>
+          CumDisjoint(lower, upper, count, cumCount)
+        case (((lower, upper), (count, Some(map))), cumCount) =>
+          CumDisjoint(lower, upper, count, cumCount)
+//          CumOverlapping(lower, upper, count, cumCount, Map.empty)
       }
 
     // Produce cumCounts as before
