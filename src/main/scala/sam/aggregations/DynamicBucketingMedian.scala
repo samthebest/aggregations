@@ -1,6 +1,7 @@
 package sam.aggregations
 
 import scala.collection.mutable
+import RangeUtils._
 
 object DynamicBucketingMedian {
   // Assumes disjoint
@@ -24,34 +25,81 @@ object DynamicBucketingMedian {
     }
   }
 
+  trait CumulatativeCount {
+    val lower: Long
+    val upper: Long
+    val count: Long
+    val cumCount: Long
+  }
+
+  case class CumDisjoint(lower: Long, upper: Long, count: Long, cumCount: Long) extends CumulatativeCount
+  case class CumOverlapping(lower: Long, upper: Long, count: Long, cumCount: Long,
+                            distribution: Map[(Long, Long), Double]) extends CumulatativeCount
+
+  def mergeOverlappingInfo(sortedMap: List[((Long, Long), Long)]): Map[(Long, Long), (Long, Option[Map[(Long, Long), Long]])] = {
+    val empty = List.empty[((Long, Long), (Long, Option[Map[(Long, Long), Long]]))]
+    sortedMap.foldLeft(empty) {
+      case ((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest, (r2@(lower, upper), count))
+        if rangesOverlap(r1, r2) =>
+
+        val mergedRange = (math.min(lowerPrev, lower), math.max(upperPrev, upper))
+        val map = Map(r1 -> countPrev, r2 -> count)
+        (mergedRange, (count + countPrev, Some(map))) +: rest
+
+      case ((r1@(lowerPrev, upperPrev), (countPrev, Some(m))) :: rest, (r2@(lower, upper), count))
+        if rangesOverlap(r1, r2) =>
+
+        val mergedRange = (math.min(lowerPrev, lower), math.max(upperPrev, upper))
+        val map = m + (r2 -> count)
+        (mergedRange, (count + countPrev, Some(map))) +: rest
+
+      case (cum@((r1@(lowerPrev, upperPrev), (countPrev, None)) :: rest), (r2@(lower, upper), count))
+        if !rangesOverlap(r1, r2) =>
+
+        (r2, (count, None)) +: cum
+
+      case (cum, (range, count)) =>
+        (range, (count, None)) +: cum
+    }
+    .toMap
+  }
+
   def medianFromDisjointBuckets(m: Map[(Long, Long), Long]): Double = {
     val sorted@(_, headCount) :: _ = m.toList.sortBy(_._1)
 
-    // bucket, totalUpToAndIncludingBucket
-    val cumulativeCounts: List[(((Long, Long), Long), Long)] =
-      sorted.zip(sorted.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2))
+    // Merge overlapping info
 
-    cumulativeCounts.last._2 match {
+    // Produce cumCounts as before
+
+    // bucket, totalUpToAndIncludingBucket
+    val cumulativeCounts: List[CumulatativeCount] =
+      sorted.zip(sorted.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2))
+      .map {
+        case (((lower, upper), count), cumCount) => CumDisjoint(lower, upper, count, cumCount)
+      }
+
+    cumulativeCounts.last.cumCount match {
       case odd if odd % 2 == 1 =>
         val middleIndex = (odd.toDouble / 2).ceil.toLong
 
         // Assumes each bucket has the endpoints
-        cumulativeCounts.find(_._2 >= middleIndex).get match {
+        cumulativeCounts.find(_.cumCount >= middleIndex).get match {
           // Exact case
-          case (((_, end), _), cum) if cum == middleIndex => end.toDouble
+          case CumDisjoint(_, end, _, cum) if cum == middleIndex => end.toDouble
           // Exact case
-          case (((start, _), count), cum) if (cum - count + 1) == middleIndex => start.toDouble
+          case CumDisjoint(start, _, count, cum) if (cum - count + 1) == middleIndex => start.toDouble
           // Assumes symmetrical distribution
-          case (((start, end), _), _) => (start + end).toDouble / 2
+          case CumDisjoint(start, end, _, _) => (start + end).toDouble / 2
         }
 
       case even =>
         val middleIndex = even / 2
 
-        (cumulativeCounts.find(_._2 >= middleIndex).get, cumulativeCounts.find(_._2 >= middleIndex + 1).get) match {
-          case (bucketLeft@(((start, end), _), _), bucketRight) if bucketLeft == bucketRight =>
+        (cumulativeCounts.find(_.cumCount >= middleIndex).get,
+          cumulativeCounts.find(_.cumCount >= middleIndex + 1).get) match {
+          case (bucketLeft@CumDisjoint(start, end, _, _), bucketRight) if bucketLeft == bucketRight =>
             (start + end).toDouble / 2
-          case ((((_, endLeft), _), _), (((startRight, _), _), _)) =>
+          case (CumDisjoint(_, endLeft, _, _), CumDisjoint(startRight, _, _, _)) =>
             (endLeft + startRight).toDouble / 2
 
         }
@@ -84,10 +132,10 @@ case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Lo
     if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
     else medianFromDisjointBuckets(m.toMap)
 
-  // A very simple implementation would be to sample from the right hand side semi-uniformly
-
-
-  def update(other: DynamicBucketingMedian): Unit = other.getMap.foreach {
-    case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
+  def update(other: DynamicBucketingMedian): Unit = {
+    other.getMap.foreach {
+      case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
+    }
+    mergeSmallestConsecutive(m, sizeLimit)
   }
 }

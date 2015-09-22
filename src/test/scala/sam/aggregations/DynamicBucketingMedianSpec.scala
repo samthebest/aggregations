@@ -87,17 +87,43 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
   }
 
-//  "Merge update" should {
-//
-//
-//    "Correctly merges" in {
-//      val median = new DynamicBucketingMedian(2)
-//      List(4l, 10l, 5l, 10l).foreach(median.update)
-//
-//      def map = mutable.Map((1l, 6l) -> 11l, (1l, 6l) -> 9l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
-//      mergeSmallestConsecutive(map, 3) must_=== mutable.Map((1l, 6l) -> 20l, (1l, 2l) -> 3l, (3l, 4l) -> 4l)
-//    }
-//  }
+  "Merge update" should {
+    "work with trivial merging" in {
+      val median = new DynamicBucketingMedian(1)
+      median.update(1l)
+      median.update(2l)
+
+      val median2 = new DynamicBucketingMedian(1)
+      median2.update(1l)
+      median2.update(2l)
+
+      median.update(median2)
+
+      median.getMap must_=== Map((1l, 2l) -> 4l)
+    }
+
+    "Correctly merges identical buckets over close buckets and gives correct median" in {
+      val median = new DynamicBucketingMedian(3)
+      median.update(1l)
+      median.update(2l)
+      median.update(3l)
+      median.update(4l)
+      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
+
+      val median2 = new DynamicBucketingMedian(1)
+      median2.update(1l)
+      median2.update(6l)
+      median2.getMap must_=== Map((1l, 6l) -> 2l)
+
+      median.update(median2)
+      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 2l)
+
+      median.update(median2)
+      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 4l)
+
+      median.result must_=== 3.0
+    }
+  }
 
   "mergeSmallestConsecutive" should {
     import DynamicBucketingMedian._
@@ -208,7 +234,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
   }
 
   "mergeSmallestConsecutive" should {
-    import DynamicBucketingMedian._
     "Find the middle range with correct counts, with 1 element Map" in {
       medianFromDisjointBuckets(Map((0l, 0l) -> 1l)) must_=== 0.0
     }
@@ -273,6 +298,49 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       "extra bucket with last count 21" in {
       medianFromDisjointBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
         (100l, 100l) -> 22l)) must_=== 55.0
+    }
+  }
+
+  "mergeOverlappingInfo" should {
+    "Not merge 2 non overlapping buckets" in {
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (5l, 8l) -> 3l)) must_=== Map(
+        (1l, 4l) -> (2l, None),
+        (5l, 8l) -> (3l, None)
+      )
+    }
+
+    "Merge 2 overlapping buckets" in {
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)) must_=== Map(
+        (1l, 8l) -> (5l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l)))
+      )
+    }
+
+    "Merge 3 overlapping buckets" in {
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)) must_=== Map(
+        (1l, 10l) -> (11l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)))
+      )
+    }
+
+    "Merge complex case 1" in {
+      mergeOverlappingInfo(List(
+        (1l, 4l) -> 2l,
+        (4l, 8l) -> 3l,
+        (9l, 10l) -> 6l,
+        (11l, 12l) -> 6l,
+        (12l, 15l) -> 2l,
+        (13l, 15l) -> 3l,
+        (14l, 14l) -> 4l,
+        (16l, 20l) -> 5l,
+        (17l, 19l) -> 7l,
+        (22l, 25l) -> 8l,
+        (22l, 27l) -> 9l
+      )) must_=== Map(
+        (1l, 8l) -> (5l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l))),
+        (9l, 10l) -> (6l, None),
+        (11l, 15l) -> (15l, Some(Map((11l, 12l) -> 6l, (12l, 15l) -> 2l, (13l, 15l) -> 3l, (14l, 14l) -> 4l))),
+        (16l, 20l) -> (12l, Some(Map((16l, 20l) -> 5l, (17l, 19l) -> 7l))),
+        (22l, 27l) -> (17l, Some(Map((22l, 25l) -> 8l, (22l, 27l) -> 9l)))
+      )
     }
   }
 }
