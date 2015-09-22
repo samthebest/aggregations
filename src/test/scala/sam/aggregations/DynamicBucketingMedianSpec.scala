@@ -345,37 +345,37 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
   }
 
   "countMapToDensity" should {
-//    "Turn trivial map into density correctly" in {
-//      countMapToDensity(List((0l, 1l) -> 2l)) must_===
-//        List((0l, 0l) -> 1.0, (1l, 1l) -> 1.0)
-//    }
-//
-//    "Turn simple pair into density correctly" in {
-//      countMapToDensity(List((0l, 1l) -> 2l, (1l, 2l) -> 2l)) must_===
-//        List((0l, 0l) -> 1.0, (1l, 1l) -> 2.0, (2l, 2l) -> 1.0)
-//    }
-//
-//    "Turn spread out pair into density correctly" in {
-//      countMapToDensity(List((0l, 4l) -> 2l, (4l, 7l) -> 2l)) must_=== List(
-//        (0l, 0l) -> 1.0,
-//        (1l, 3l) -> 0.0,
-//        (4l, 4l) -> 2.0,
-//        (5l, 6l) -> 0.0,
-//        (7l, 7l) -> 1.0
-//      )
-//    }
+    "Turn trivial map into density correctly" in {
+      countMapToDensity(List((0l, 1l) -> 2l)) must_===
+        List((0l, 0l) -> 1.0, (1l, 1l) -> 1.0)
+    }
+
+    "Turn simple pair into density correctly" in {
+      countMapToDensity(List((0l, 1l) -> 2l, (1l, 2l) -> 2l)) must_===
+        List((0l, 0l) -> 1.0, (1l, 1l) -> 2.0, (2l, 2l) -> 1.0)
+    }
+
+    "Turn spread out pair into density correctly" in {
+      countMapToDensity(List((0l, 4l) -> 2l, (4l, 7l) -> 2l)) must_=== List(
+        (0l, 0l) -> 1.0,
+        (1l, 3l) -> 0.0,
+        (4l, 4l) -> 2.0,
+        (5l, 6l) -> 0.0,
+        (7l, 7l) -> 1.0
+      )
+    }
 
     def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
 
-//    "Turn spread out pair into density correctly with greater than 2 counts" in {
-//      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
-//        (0l, 0l) -> (1.0 + 2.0 / 5),
-//        (1l, 3l) -> roundTo5(0.0 + 2.0 * 3 / 5),
-//        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
-//        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
-//        (7l, 7l) -> (1.0 + 2.0 / 4)
-//      )
-//    }
+    "Turn spread out pair into density correctly with greater than 2 counts" in {
+      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
+        (0l, 0l) -> (1.0 + 2.0 / 5),
+        (1l, 3l) -> roundTo5(0.0 + 2.0 * 3 / 5),
+        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
+        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
+        (7l, 7l) -> (1.0 + 2.0 / 4)
+      )
+    }
 
     "Turn spread out pair into density correctly with simple double overlap" in {
       countMapToDensity(List((0l, 4l) -> 4l, (4l, 4l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
@@ -386,15 +386,15 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )
     }
 
-//    "Turn spread out pair into density correctly with greater than 2 counts and double overlap" in {
-//      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
-//        (0l, 0l) -> (1.0 + 2.0 / 5),
-//        (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
-//        (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
-//        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
-//        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
-//        (7l, 7l) -> (1.0 + 2.0 / 4)
-//      )
-//    }
+    "Turn spread out pair into density correctly with greater than 2 counts and double overlap" in {
+      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
+        (0l, 0l) -> (1.0 + 2.0 / 5),
+        (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
+        (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
+        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
+        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
+        (7l, 7l) -> (1.0 + 2.0 / 4)
+      )
+    }
   }
 }
