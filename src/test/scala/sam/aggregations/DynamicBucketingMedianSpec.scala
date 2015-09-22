@@ -303,20 +303,20 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
   "mergeOverlappingInfo" should {
     "Not merge 2 non overlapping buckets" in {
-      mergeOverlappingInfo(List((1l, 4l) -> 2l, (5l, 8l) -> 3l)) must_=== Map(
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (5l, 8l) -> 3l)) must_=== List(
         (1l, 4l) -> (2l, None),
         (5l, 8l) -> (3l, None)
       )
     }
 
     "Merge 2 overlapping buckets" in {
-      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)) must_=== Map(
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)) must_=== List(
         (1l, 8l) -> (5l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l)))
       )
     }
 
     "Merge 3 overlapping buckets" in {
-      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)) must_=== Map(
+      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)) must_=== List(
         (1l, 10l) -> (11l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)))
       )
     }
@@ -334,7 +334,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
         (17l, 19l) -> 7l,
         (22l, 25l) -> 8l,
         (22l, 27l) -> 9l
-      )) must_=== Map(
+      )) must_=== List(
         (1l, 8l) -> (5l, Some(Map((1l, 4l) -> 2l, (4l, 8l) -> 3l))),
         (9l, 10l) -> (6l, None),
         (11l, 15l) -> (15l, Some(Map((11l, 12l) -> 6l, (12l, 15l) -> 2l, (13l, 15l) -> 3l, (14l, 14l) -> 4l))),
