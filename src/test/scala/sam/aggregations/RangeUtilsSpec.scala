@@ -38,5 +38,13 @@ class RangeUtilsSpec extends Specification {
     "Return true for (7, 8), (7, 7)" in {
       overlap((7, 8), (7, 7)) must beTrue
     }
+
+    "Return true for (1, 3), (3, 3)" in {
+      overlap((1, 3), (3, 3)) must beTrue
+    }
+
+    "Return true for (3, 3), (1, 3)" in {
+      overlap((3, 3), (1, 3)) must beTrue
+    }
   }
 }

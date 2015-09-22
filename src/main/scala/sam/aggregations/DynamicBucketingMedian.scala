@@ -46,49 +46,92 @@ object DynamicBucketingMedian {
   def splitRange(range: Long2, newLowerPart: Long, newUpperPart: Long, origDensity: Double): ((Long, Long), Double) =
     ((newLowerPart, newUpperPart), divideDensity(range._1, range._2, newLowerPart, newUpperPart, origDensity))
 
+
+
+  def splitAll(pt: (Long2, Double), endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] = {
+//    println("pt = " + pt)
+
+    val (r1@(lower, upper), origDensity) = pt
+    val overlapping =
+      endPointsDetached.filter(p => overlap(r1, p._1) && p._1 != pt._1)
+      .filter {
+        case (r2@(otherLower, otherUpper), density) if r1 == r2 =>
+          false
+        case (r2@(otherLower, otherUpper), density) if otherLower <= lower && otherUpper > upper =>
+          false
+        case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper == upper =>
+          false
+        case _ => true
+      }
+//    if (pt._1 == (1l, 3l)) {
+//      println("endPointsDetached = " + endPointsDetached)
+//      endPointsDetached.foreach { p =>
+//        println("p = " + p)
+//        println("overlap(r1, p._1) = " + overlap(r1, p._1))
+//        println("p._1 != pt._1 = " + (p._1 != pt._1))
+//        println("overlap(r1, p._1) && p._1 != pt._1: " + (overlap(r1, p._1) && p._1 != pt._1))
+//      }
+//      println("overlapping = " + overlapping)
+//    }
+
+//    println("pt = " + pt)
+//    println("overlapping = " + overlapping)
+//    java.lang.Thread.sleep(500)
+
+    if (overlapping.nonEmpty) {
+
+//      println("splitting pt")
+      overlapping.flatMap {
+//        case (r2@(otherLower, otherUpper), density) if r1 == r2 =>
+//          List(pt)
+//        case (r2@(otherLower, otherUpper), density) if otherLower <= lower && otherUpper > upper =>
+//          List(pt)
+//        case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper == upper =>
+//          List(pt)
+
+        case (r2@(otherLower, otherUpper), density) if otherLower == lower =>
+          List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
+
+        case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper >= upper =>
+          List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, upper, origDensity))
+
+        case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper < upper =>
+          List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, otherUpper, origDensity),
+            splitRange(r1, otherUpper + 1, upper, origDensity))
+
+        case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper < upper =>
+          List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
+
+//        case ((3l, 3l), density) =>
+//          println("r1 = " + r1)
+//          ???
+      }
+      .distinct
+      .flatMap(splitAll(_, overlapping))
+    } else
+      List(pt)
+  }
+
   // Method to turn the count map into a distribution
   def countMapToDensity(m: List[((Long, Long), Long)]): List[((Long, Long), Double)] = {
     // Split each into a density range
 
-    val splitted = m.flatMap {
+    val endPointsDetached = m.flatMap {
       case ((lower, upper), n) if lower == upper => List((lower, lower) -> n.toDouble)
       case ((lower, upper), 2l) if upper == lower + 1 => List((lower, lower) -> 1.0, (upper, upper) -> 1.0)
-      case ((lower, upper), 2l) => List((lower, lower) -> 1.0, (lower + 1, upper - 1) -> 0.0, (upper, upper) -> 1.0)
+//      case ((lower, upper), 2l) => List((lower, lower) -> 1.0, (lower + 1, upper - 1) -> 0.0, (upper, upper) -> 1.0)
       case ((lower, upper), n) =>
-        val extraMass = (n - 2).toDouble / (upper + 1 - lower)
-        List((lower, lower) -> (1.0 + extraMass), (lower + 1, upper - 1) -> extraMass, (upper, upper) -> (1.0 + extraMass))
+        val extraMassPerPoint = (n - 2).toDouble / (upper + 1 - lower)
+        List(
+          (lower, lower) -> (1.0 + extraMassPerPoint),
+          (lower + 1, upper - 1) -> (extraMassPerPoint * (upper - 1 - lower)),
+          (upper, upper) -> (1.0 + extraMassPerPoint)
+        )
     }
 
 //    println("splitted = " + splitted)
 
-    // This needs to be recursive to catch the cases when we have multiple overlaying ones
-
-    val disjoint = splitted.sortBy(_._1._1).flatMap {
-      case pt@(r1@(lower, upper), origDensity) =>
-        // Take each other range and split this according to it until we run out
-        val overlapping = splitted.takeWhile(p => overlap(r1, p._1))
-        if (overlapping.nonEmpty)
-          overlapping.flatMap {
-            case (r2@(otherLower, otherUpper), density) if r1 == r2 => List(pt)
-            case (r2@(otherLower, otherUpper), density) if otherLower <= lower && otherUpper > upper => List(pt)
-            case (r2@(otherLower, otherUpper), density) if otherLower == lower =>
-              List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
-
-            case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper >= upper =>
-              List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, upper, origDensity))
-
-            case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper < upper =>
-              List(splitRange(r1, lower, otherLower - 1, origDensity), splitRange(r1, otherLower, otherUpper, origDensity),
-                splitRange(r1, otherUpper + 1, upper, origDensity))
-
-            case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper < upper =>
-              List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
-          }
-          .distinct
-        else
-          List(pt)
-
-    }
+    val disjoint = endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
 
 //    println("disjoint = " + disjoint)
 
