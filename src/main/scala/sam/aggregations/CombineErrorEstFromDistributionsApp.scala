@@ -1,14 +1,13 @@
 package sam.aggregations
 
-// Only runs for the sliding window mode.
-object ErrorEstimatorFromDistributionsApp {
+object CombineErrorEstFromDistributionsApp {
   def main(args: Array[String]): Unit = {
 
-    for (limit <- List(20, 50, 100, 500)) {
+    for (limit <- List(50, 100, 500)) {
       println("\n\nLimit = " + limit)
       val errors = for {
-        n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
-        max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
+        n <- List(50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000, 20000) if limit < n
+        max <- List(100, 200, 300, 1000, 10000, 100000)
       } yield {
           val median = new DynamicBucketingMedian(limit)
           val error = ErrorEstimator.normalDistribution(median, n, max)
@@ -26,8 +25,8 @@ object ErrorEstimatorFromDistributionsApp {
     for (limit <- List(20, 50, 100, 500)) {
       println("\n\nLimit = " + limit)
       val errors = for {
-        n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
-        max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
+        n <- List(50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000, 20000) if limit < n
+        max <- List(100, 200, 300, 1000, 10000, 100000)
       } yield {
           val median = new DynamicBucketingMedian(limit)
           val error = ErrorEstimator.uniformDistribution(median, n, max)
@@ -41,6 +40,3 @@ object ErrorEstimatorFromDistributionsApp {
     }
   }
 }
-
-
-

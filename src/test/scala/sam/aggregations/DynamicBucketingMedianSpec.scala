@@ -12,7 +12,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
 //  basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
 //  sufficientMemoryProperties(i => new DynamicBucketingMedian(i))
-//
+
 //  "DynamicBucketingMedian" should {
 //    "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
 //      val median = new DynamicBucketingMedian(1)
@@ -87,7 +87,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //    }
 //  }
 
-  "Merge update" should {
+//  "Merge update" should {
 //    "work with trivial merging" in {
 //      val median = new DynamicBucketingMedian(1)
 //      median.update(1l)
@@ -101,29 +101,29 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //
 //      median.getMap must_=== Map((1l, 2l) -> 4l)
 //    }
-
-    "Correctly merges identical buckets over close buckets and gives correct median" in {
-      val median = new DynamicBucketingMedian(3)
-      median.update(1l)
-      median.update(2l)
-      median.update(3l)
-      median.update(4l)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
-
-      val median2 = new DynamicBucketingMedian(1)
-      median2.update(1l)
-      median2.update(6l)
-      median2.getMap must_=== Map((1l, 6l) -> 2l)
-
-      median.update(median2)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 2l)
-
-      median.update(median2)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 4l)
-
-      median.result must_=== 3.0
-    }
-  }
+//
+//    "Correctly merges identical buckets over close buckets and gives correct median" in {
+//      val median = new DynamicBucketingMedian(3)
+//      median.update(1l)
+//      median.update(2l)
+//      median.update(3l)
+//      median.update(4l)
+//      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
+//
+//      val median2 = new DynamicBucketingMedian(1)
+//      median2.update(1l)
+//      median2.update(6l)
+//      median2.getMap must_=== Map((1l, 6l) -> 2l)
+//
+//      median.update(median2)
+//      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 2l)
+//
+//      median.update(median2)
+//      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 4l)
+//
+//      median.result must_=== 3.0
+//    }
+//  }
 
 //  "mergeSmallestConsecutive" should {
 //    import DynamicBucketingMedian._
@@ -232,8 +232,8 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //      }
 //    }
 //  }
-//
-//  "mergeSmallestConsecutive" should {
+
+  "mergeSmallestConsecutive" should {
 //    "Find the middle range with correct counts, with 1 element Map" in {
 //      medianFromBuckets(Map((0l, 0l) -> 1l)) must_=== 0.0
 //    }
@@ -299,25 +299,42 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //      medianFromBuckets(Map((1l, 2l) -> 10l, (6l, 8l) -> 20l, (10l, 15l) -> 30l, (50l, 60l) -> 40,
 //        (100l, 100l) -> 22l)) must_=== 55.0
 //    }
-//  }
-//
+
+    "return correct median when have overlapping symmetrical buckets" in {
+      medianFromBuckets(Map((1l, 2l) -> 10l, (2l, 3l) -> 10l)) must_=== 2.0
+    }
+
+    // There is an excel sheet attached to http://10.65.12.238:8070/browse/SBPINSIGHTS-568 which helped me calculate
+    // these
+//    "return correct median for really complicated overlapping case" in {
+//      medianFromBuckets(Map(
+//        (1l, 10l) -> 15l,
+//        (1l, 4l) -> 6l,
+//        (4l, 15l) -> 20l,
+//        (6l, 10l) -> 10l,
+//        (10l, 12l) -> 40l,
+//        (13l, 15l) -> 5l
+//      )) must_=== 11.0
+//    }
+  }
+
 //  "mergeOverlappingInfo" should {
 //    "Not merge 2 non overlapping buckets" in {
 //      mergeOverlappingInfo(List((1l, 4l) -> 2l, (5l, 8l) -> 3l)) must_=== List(
-//        (1l, 4l) -> (2l, None),
-//        (5l, 8l) -> (3l, None)
+//        (1l, 4l) ->(2l, None),
+//        (5l, 8l) ->(3l, None)
 //      )
 //    }
 //
 //    "Merge 2 overlapping buckets" in {
 //      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)) must_=== List(
-//        (1l, 8l) -> (5l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)))
+//        (1l, 8l) ->(5l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l)))
 //      )
 //    }
 //
 //    "Merge 3 overlapping buckets" in {
 //      mergeOverlappingInfo(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)) must_=== List(
-//        (1l, 10l) -> (11l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)))
+//        (1l, 10l) ->(11l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l, (7l, 10l) -> 6l)))
 //      )
 //    }
 //
@@ -335,15 +352,15 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //        (22l, 25l) -> 8l,
 //        (22l, 27l) -> 9l
 //      )) must_=== List(
-//        (1l, 8l) -> (5l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l))),
-//        (9l, 10l) -> (6l, None),
-//        (11l, 15l) -> (15l, Some(List((11l, 12l) -> 6l, (12l, 15l) -> 2l, (13l, 15l) -> 3l, (14l, 14l) -> 4l))),
-//        (16l, 20l) -> (12l, Some(List((16l, 20l) -> 5l, (17l, 19l) -> 7l))),
-//        (22l, 27l) -> (17l, Some(List((22l, 25l) -> 8l, (22l, 27l) -> 9l)))
+//        (1l, 8l) ->(5l, Some(List((1l, 4l) -> 2l, (4l, 8l) -> 3l))),
+//        (9l, 10l) ->(6l, None),
+//        (11l, 15l) ->(15l, Some(List((11l, 12l) -> 6l, (12l, 15l) -> 2l, (13l, 15l) -> 3l, (14l, 14l) -> 4l))),
+//        (16l, 20l) ->(12l, Some(List((16l, 20l) -> 5l, (17l, 19l) -> 7l))),
+//        (22l, 27l) ->(17l, Some(List((22l, 25l) -> 8l, (22l, 27l) -> 9l)))
 //      )
 //    }
 //  }
-//
+
 //  "countMapToDensity" should {
 //    "Turn trivial map into density correctly" in {
 //      countMapToDensity(List((0l, 1l) -> 2l)) must_===

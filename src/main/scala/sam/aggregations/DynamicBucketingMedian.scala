@@ -34,7 +34,9 @@ object DynamicBucketingMedian {
 
   case class CumDisjoint(lower: Long, upper: Long, count: Long, cumCount: Long) extends CumulatativeCount
   case class CumOverlapping(lower: Long, upper: Long, count: Long, cumCount: Long,
-                            distribution: List[((Long, Long), Double)]) extends CumulatativeCount
+                            overlappingMap: List[((Long, Long), Long)]) extends CumulatativeCount {
+    def distribution: List[(Long2, Double)] = densityToCumulativeDensity(countMapToDensity(overlappingMap))
+  }
 
   def divideDensity(lower: Long, upper: Long, newLowerPart: Long, newUpperPart: Long, origDensity: Double): Double = {
     val origRange = upper + 1 - lower
@@ -50,6 +52,10 @@ object DynamicBucketingMedian {
 
   def splitAll(pt: (Long2, Double), endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] = {
     val (r1@(lower, upper), origDensity) = pt
+    require(lower <= upper, "dodgy pt = " + pt)
+
+    println("pt = " + pt)
+
     val overlapping =
       endPointsDetached.filter(p => overlap(r1, p._1) && p._1 != pt._1)
       .filter {
@@ -94,6 +100,8 @@ object DynamicBucketingMedian {
         )
     }
 
+    println("endPointsDetached = " + endPointsDetached)
+
     val disjoint = endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
 
     disjoint.groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1)
@@ -128,7 +136,7 @@ object DynamicBucketingMedian {
   def medianFromBuckets(m: Map[(Long, Long), Long]): Double = {
     val overlapsMerged@(_, (headCount, _)) :: _ = mergeOverlappingInfo(m.toList.sortBy(_._1))
 
-    println("overlapsMerged = " + overlapsMerged)
+//    println("overlapsMerged = " + overlapsMerged)
 
     val cumulativeCounts: List[CumulatativeCount] =
       overlapsMerged.zip(overlapsMerged.drop(1).scanLeft(headCount)((cum, cur) => cum + cur._2._1))
@@ -137,13 +145,10 @@ object DynamicBucketingMedian {
           CumDisjoint(lower, upper, count, cumCount)
         case (((lower, upper), (count, Some(map))), cumCount) =>
 //          CumDisjoint(lower, upper, count, cumCount)
-          // TODO Optimization - this should be lazy, since we only need it when we hit an overlapping
-          // section and we don't need all overlapping sections
-                  CumOverlapping(lower, upper, count, cumCount,
-                    densityToCumulativeDensity(countMapToDensity(map)))
+                  CumOverlapping(lower, upper, count, cumCount, map)
       }
 
-    println("cumulativeCounts = " + cumulativeCounts)
+//    println("cumulativeCounts = " + cumulativeCounts)
 
     // Produce cumCounts as before
 
@@ -166,13 +171,13 @@ object DynamicBucketingMedian {
           case CumDisjoint(start, _, count, cum) if (cum - count + 1) == middleIndex => start.toDouble
           // Assumes symmetrical distribution
           case CumDisjoint(start, end, _, _) => (start + end).toDouble / 2
-          case CumOverlapping(start, end, count, cumCount, dist) =>
-            println("Got here")
+          case cumOverlapping@CumOverlapping(_, _, count, cumCount, _) =>
+//            println("Got here")
             // I.e. how far back we need to go from the right hand side
             val reverseIndexInOverlap = cumCount - middleIndex
             // I.e. how far in we need to go
             val innerIndex = count - reverseIndexInOverlap
-            dist.find(_._2 >= innerIndex) match {
+            cumOverlapping.distribution.find(_._2 >= innerIndex) match {
               case Some(((lower, upper), density)) => (lower + upper).toDouble / 2
             }
         }
@@ -189,13 +194,13 @@ object DynamicBucketingMedian {
           case (CumOverlapping(startLeft, endLeft, _, _, _), CumOverlapping(startRight, _, _, _, _))
           if startLeft != startRight =>
             (endLeft + startRight).toDouble / 2
-          case (CumOverlapping(_, _, count, cumCount, dist), _) =>
-            println("Got here")
+          case (cumOverlapping@CumOverlapping(_, _, count, cumCount, dist), _) =>
+//            println("Got here")
             // I.e. how far back we need to go from the right hand side
             val reverseIndexInOverlap = cumCount - middleIndex
             // I.e. how far in we need to go
             val innerIndex = count - reverseIndexInOverlap
-            dist.find(_._2 >= innerIndex) match {
+            cumOverlapping.distribution.find(_._2 >= innerIndex) match {
               case Some(((lower, upper), density)) => (lower + upper).toDouble / 2
             }
         }
