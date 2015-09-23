@@ -49,8 +49,6 @@ object DynamicBucketingMedian {
   def splitRange(range: Long2, newLowerPart: Long, newUpperPart: Long, origDensity: Double): ((Long, Long), Double) =
     ((newLowerPart, newUpperPart), divideDensity(range._1, range._2, newLowerPart, newUpperPart, origDensity))
 
-
-
   def splitAll(pt: (Long2, Double), endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] = {
     val (r1@(lower, upper), origDensity) = pt
     require(lower <= upper, "dodgy pt = " + pt)
@@ -108,7 +106,29 @@ object DynamicBucketingMedian {
       )
   }
 
-  def disjointify(endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] =
+  def disjointify(endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] = {
+//    val ends: Set[Long] = endPointsDetached.toSet.flatMap {
+//      case ((lower, upper), density) => Set(lower, upper)
+//    }
+
+    val lowerEnds = endPointsDetached.map(_._1._1).distinct
+    val upperEnds = endPointsDetached.map(_._1._2).distinct
+
+    endPointsDetached.flatMap {
+      case pt@((lower, upper), _) if lower == upper => List(pt)
+      case pt@(r@(lower, upper), origDensity) =>
+        val newLowerPoints = lowerEnds.filter(_ > lower).filter(_ <= upper).flatMap(l => List((l - 1, 1), (l, 0)))
+        val newUpperPoints = upperEnds.filter(_ < upper).filter(_ >= lower).flatMap(u => List((u, 1), (u + 1, 0)))
+        ((lower, 0) +: (newLowerPoints ++ newUpperPoints).distinct.sorted :+ (upper, 1)).grouped(2).map {
+          case List((newLower, _), (newUpper, _)) => splitRange(r, newLower, newUpper, origDensity)
+        }
+
+//        Nil
+        // For all lowerEnds in the range (excluding lower) this is a break point
+    }
+  }
+
+  def disjointifyOldNotWorky(endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] =
     endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
 
   // Method to turn the count map into a distribution

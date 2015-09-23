@@ -11,6 +11,8 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       case ((r1, r2), count) => ((r1.toLong, r2.toLong), count.toLong)
     }
 
+      def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
+
 //  basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
 //  sufficientMemoryProperties(i => new DynamicBucketingMedian(i))
 
@@ -307,7 +309,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
     // There is an excel sheet attached to http://10.65.12.238:8070/browse/SBPINSIGHTS-568 which helped me calculate
     // these
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 1" in {
       medianFromBuckets(Map(
         //        (1l, 10l) -> 15l,
         //        (1l, 4l) -> 6l,
@@ -318,7 +320,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 11.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 2" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
@@ -329,7 +331,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 10.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 3" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
@@ -340,7 +342,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 8.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 4" in {
       medianFromBuckets(Map(
 //        (1l, 10l) -> 15l,
 //        (1l, 4l) -> 6l,
@@ -351,7 +353,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 10.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 5" in {
       medianFromBuckets(Map(
                 (1l, 10l) -> 15l,
                 (1l, 4l) -> 6l,
@@ -362,7 +364,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 10.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 6" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
@@ -374,7 +376,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       // )) must_=== 7.0
     }
 
-    "return correct median for really complicated overlapping case" in {
+    "return correct median for really complicated overlapping case 7" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
@@ -387,13 +389,40 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
   }
 
   "disjointify" should {
+    // TODO This isn't testing disjointify, it's testing countMapToDensity
     "Disjointify two simple overlapping ranges" in {
       disjointify(List(
         (4l, 15l) -> 20l,
         (13l, 15l) -> 5l
-      ).flatMap(detachEndpoints)) must_=== List(
+      ).flatMap(detachEndpoints))
+      .groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1) must_=== List(
         (4l, 4l) -> 2.5,
         (5l, 12l) -> 8 * 1.5,
+        (13l, 13l) -> 3.5,
+        (14l, 14l) -> 2.5,
+        (15l, 15l) -> 4.5
+      )
+    }
+
+    "Disjointify many overlapping ranges" in {
+      disjointify(List(
+        (1l, 10l) -> 15l,
+        (1l, 4l) -> 6l,
+        (4l, 15l) -> 20l,
+        (6l, 10l) -> 10l,
+        (10l, 12l) -> 40l,
+        (13l, 15l) -> 5l
+      ).flatMap(detachEndpoints))
+      .groupBy(_._1).mapValues(_.map(_._2).sum).mapValues(roundTo5).toList.sortBy(_._1._1) must_=== List(
+        (1l, 1l) -> 4.3,
+        (2l, 3l) -> 4.59999,
+        (4l, 4l) -> 5.8,
+        (5l, 5l) -> 2.8,
+        (6l, 6l) -> 5.4,
+        (7l, 9l) -> 13.2,
+        (10l, 10l) -> roundTo5(20.06666667),
+        (11l, 11l) -> roundTo5(14.16666667),
+        (12l, 12l) -> roundTo5(15.16666667),
         (13l, 13l) -> 3.5,
         (14l, 14l) -> 2.5,
         (15l, 15l) -> 4.5
@@ -515,7 +544,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 //      )
 //    }
 //
-//    def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
+
 //
 //    "Turn spread out pair into density correctly with greater than 2 counts" in {
 //      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
