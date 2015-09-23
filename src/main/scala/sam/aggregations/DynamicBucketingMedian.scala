@@ -55,11 +55,12 @@ object DynamicBucketingMedian {
     val (r1@(lower, upper), origDensity) = pt
     require(lower <= upper, "dodgy pt = " + pt)
 
-    val overlapping =
+    val overlapAndNeedsSplitting =
       endPointsDetached.filter(p => overlap(r1, p._1) && p._1 != pt._1)
       .filter {
         case (r2@(otherLower, otherUpper), density) if r1 == r2 =>
           false
+          // I.e. the other one covers this one
         case (r2@(otherLower, otherUpper), density) if otherLower <= lower && otherUpper > upper =>
           false
         case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper == upper =>
@@ -67,8 +68,13 @@ object DynamicBucketingMedian {
         case _ => true
       }
 
-    if (overlapping.nonEmpty)
-      overlapping.flatMap {
+    if (overlapAndNeedsSplitting.nonEmpty)
+      // problem is we will end up re-splitting according to other ranges.
+
+      // Should just try a completely different algo, we say grab all the endpoints, then use them to create all the
+      // splits
+
+      overlapAndNeedsSplitting.flatMap {
         case (r2@(otherLower, otherUpper), density) if otherLower == lower =>
           List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
         case (r2@(otherLower, otherUpper), density) if otherLower > lower && otherUpper >= upper =>
@@ -81,7 +87,7 @@ object DynamicBucketingMedian {
       }
         // This distinct prob causing the bug - need better way to optimize (groupBy)
 //      .distinct
-      .flatMap(splitAll(_, overlapping))
+      .flatMap(splitAll(_, overlapAndNeedsSplitting))
     else
       List(pt)
   }
@@ -102,11 +108,14 @@ object DynamicBucketingMedian {
       )
   }
 
+  def disjointify(endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] =
+    endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
+
   // Method to turn the count map into a distribution
   def countMapToDensity(m: List[((Long, Long), Long)]): List[((Long, Long), Double)] = {
     val endPointsDetached = m.flatMap(detachEndpoints)
 
-    val disjoint = endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
+    val disjoint = disjointify(endPointsDetached)
 
     disjoint.groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1)
   }
