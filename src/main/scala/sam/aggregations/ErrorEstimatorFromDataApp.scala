@@ -5,7 +5,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 import scala.util.Random
 
 // spark-submit --master yarn-client --driver-memory 10g --executor-memory 20g --executor-cores 10 --num-executors 5 \
-// --class sam.aggregations.ErrorEstimatorFromDataApp aggregations-assembly-0.1.0.jar /user/savagesa/median-test-data 100
+// --class sam.aggregations.ErrorEstimatorFromDataApp aggregations-assembly-0.1.0.jar /user/savagesa/median-test-data 100 2>&1 | tee aggregations.log
 object ErrorEstimatorFromDataApp {
   def main(args: Array[String]): Unit = {
     // Use Scallop when args gets more complicated

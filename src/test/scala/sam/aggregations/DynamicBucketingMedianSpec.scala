@@ -3,6 +3,7 @@ package sam.aggregations
 import sam.aggregations.DynamicBucketingMedian._
 
 import scala.collection.mutable
+import scala.util.Try
 
 class DynamicBucketingMedianSpec extends MedianSpecUtils {
   def toLongMap(m: mutable.Map[(Int, Int), Int]): mutable.Map[(Long, Long), Long] =
@@ -306,16 +307,66 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
     // There is an excel sheet attached to http://10.65.12.238:8070/browse/SBPINSIGHTS-568 which helped me calculate
     // these
-//    "return correct median for really complicated overlapping case" in {
-//      medianFromBuckets(Map(
-//        (1l, 10l) -> 15l,
-//        (1l, 4l) -> 6l,
-//        (4l, 15l) -> 20l,
-//        (6l, 10l) -> 10l,
-//        (10l, 12l) -> 40l,
-//        (13l, 15l) -> 5l
-//      )) must_=== 11.0
-//    }
+    "return correct median for really complicated overlapping case" in {
+      medianFromBuckets(Map(
+        (1l, 10l) -> 15l,
+        (1l, 4l) -> 6l,
+        (4l, 15l) -> 20l,
+        (6l, 10l) -> 10l,
+        (10l, 12l) -> 40l,
+        (13l, 15l) -> 5l
+      )) must_=== 11.0
+    }
+  }
+
+  "detachEndpoints" should {
+    "Correctly detach trivial range with trivial count" in {
+      detachEndpoints((1l, 1l) -> 1l) must_=== List((1l, 1l) -> 1.0)
+    }
+
+    "Correctly detach trivial range with count 2" in {
+      detachEndpoints((1l, 1l) -> 2l) must_=== List((1l, 1l) -> 2.0)
+    }
+
+    "Correctly detach trivial range with count 3" in {
+      detachEndpoints((1l, 1l) -> 3l) must_=== List((1l, 1l) -> 3.0)
+    }
+
+    "Correctly throws exception for impossible case 1" in {
+      Try(detachEndpoints((1l, 2l) -> 1l)).isFailure must beTrue
+    }
+
+    "Correctly throws exception for impossible case 2" in {
+      Try(detachEndpoints((1l, 5l) -> 1l)).isFailure must beTrue
+    }
+
+    "Correctly detach pair range with count 2" in {
+      detachEndpoints((1l, 2l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 2l) -> 1.0)
+    }
+
+    "Correctly detach pair range with count 3" in {
+      detachEndpoints((1l, 2l) -> 3l) must_=== List((1l, 1l) -> 1.5, (2l, 2l) -> 1.5)
+    }
+
+    "Correctly detach 3 range with count 2" in {
+      detachEndpoints((1l, 3l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 2l) -> 0.0, (3l, 3l) -> 1.0)
+    }
+
+    "Correctly detach 3 range with count 5" in {
+      detachEndpoints((1l, 3l) -> 5l) must_=== List((1l, 1l) -> 2.0, (2l, 2l) -> 1.0, (3l, 3l) -> 2.0)
+    }
+
+    "Correctly detach 3 range with count 8" in {
+      detachEndpoints((1l, 3l) -> 8l) must_=== List((1l, 1l) -> 3.0, (2l, 2l) -> 2.0, (3l, 3l) -> 3.0)
+    }
+
+    "Correctly detach 4 range with count 2" in {
+      detachEndpoints((1l, 4l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 3l) -> 0.0, (4l, 4l) -> 1.0)
+    }
+
+    "Correctly detach 4 range with count 5" in {
+      detachEndpoints((1l, 4l) -> 5l) must_=== List((1l, 1l) -> 2.0, (2l, 3l) -> 1.0, (4l, 4l) -> 2.0)
+    }
   }
 
 //  "mergeOverlappingInfo" should {

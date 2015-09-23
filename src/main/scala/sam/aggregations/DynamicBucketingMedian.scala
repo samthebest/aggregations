@@ -3,6 +3,7 @@ package sam.aggregations
 import scala.collection.mutable
 import RangeUtils._
 
+// TODO Chop up into smaller objects
 object DynamicBucketingMedian {
   // Core of the algorithm, this has the potential for a lot of variations
   def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
@@ -54,8 +55,6 @@ object DynamicBucketingMedian {
     val (r1@(lower, upper), origDensity) = pt
     require(lower <= upper, "dodgy pt = " + pt)
 
-    println("pt = " + pt)
-
     val overlapping =
       endPointsDetached.filter(p => overlap(r1, p._1) && p._1 != pt._1)
       .filter {
@@ -80,27 +79,32 @@ object DynamicBucketingMedian {
         case (r2@(otherLower, otherUpper), density) if otherLower < lower && otherUpper < upper =>
           List(splitRange(r1, lower, otherUpper, origDensity), splitRange(r1, otherUpper + 1, upper, origDensity))
       }
-      .distinct
+        // This distinct prob causing the bug - need better way to optimize (groupBy)
+//      .distinct
       .flatMap(splitAll(_, overlapping))
     else
       List(pt)
   }
 
+  def detachEndpoints(pt: (Long2, Long)): List[(Long2, Double)] = pt match {
+    case ((lower, upper), n) if lower == upper => List((lower, lower) -> n.toDouble)
+//    case ((lower, upper), 2l) if upper == lower + 1 => List((lower, lower) -> 1.0, (upper, upper) -> 1.0)
+    case ((lower, upper), 1l) if lower != upper => throw new IllegalArgumentException("Impossible situation")
+    case ((lower, upper), n) if upper == lower + 1 =>
+      val extraMassPerPoint = (n - 2).toDouble / (upper + 1 - lower)
+      List((lower, lower) -> (1.0 + extraMassPerPoint), (upper, upper) -> (1.0 + extraMassPerPoint))
+    case ((lower, upper), n) =>
+      val extraMassPerPoint = (n - 2).toDouble / (upper + 1 - lower)
+      List(
+        (lower, lower) -> (1.0 + extraMassPerPoint),
+        (lower + 1, upper - 1) -> (extraMassPerPoint * (upper - 1 - lower)),
+        (upper, upper) -> (1.0 + extraMassPerPoint)
+      )
+  }
+
   // Method to turn the count map into a distribution
   def countMapToDensity(m: List[((Long, Long), Long)]): List[((Long, Long), Double)] = {
-    val endPointsDetached = m.flatMap {
-      case ((lower, upper), n) if lower == upper => List((lower, lower) -> n.toDouble)
-      case ((lower, upper), 2l) if upper == lower + 1 => List((lower, lower) -> 1.0, (upper, upper) -> 1.0)
-      case ((lower, upper), n) =>
-        val extraMassPerPoint = (n - 2).toDouble / (upper + 1 - lower)
-        List(
-          (lower, lower) -> (1.0 + extraMassPerPoint),
-          (lower + 1, upper - 1) -> (extraMassPerPoint * (upper - 1 - lower)),
-          (upper, upper) -> (1.0 + extraMassPerPoint)
-        )
-    }
-
-    println("endPointsDetached = " + endPointsDetached)
+    val endPointsDetached = m.flatMap(detachEndpoints)
 
     val disjoint = endPointsDetached.sortBy(_._1._1).flatMap(splitAll(_, endPointsDetached))
 
