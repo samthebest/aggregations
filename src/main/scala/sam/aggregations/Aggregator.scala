@@ -39,7 +39,7 @@ final case class RR[+H, T <: MultiResult](head: H, tail: T) extends MultiResult
 
 sealed trait MultiAggregator[V] extends Product with Serializable with Aggregator[MultiResult, V, MultiAggregator[V]] {
   // TODO We need to override & to make it so that the head is never a MutliAggregator - otherwise we will end up
-  // with an unnecessary level of nesting
+  // with an unnecessary level of nesting.
 }
 
 case class MultiAggregatorNil[V]() extends MultiAggregator[V] {

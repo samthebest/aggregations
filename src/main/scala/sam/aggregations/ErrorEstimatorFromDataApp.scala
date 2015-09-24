@@ -11,7 +11,6 @@ object ErrorEstimatorFromDataApp {
   def main(args: Array[String]): Unit = {
     // Use Scallop when args gets more complicated
 
-    //val testDataPath = args.headOption.getOrElse("/user/savagesa/median-test-data")
     val testDataPath = args(0)
     val memory = args(1).toInt
     val divisor = args(2).toInt
@@ -51,21 +50,6 @@ object ErrorEstimatorFromDataApp {
         medianFac = new MedianEstimator(memory) + _,
         memoryCap = memory
       )
-
-    import Aggregator._
-
-    // Example of how to use API
-    val testData =
-      sc.textFile(testDataPath).map(_.split("\t").toList).map {
-        case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong / divisor))
-      }
-      .groupByKey().flatMap(_._2)
-
-    val estimates =
-      testData.aggregateWith[MultiResult, MultiAggregator[Long]](new MedianEstimator(memory) & new MedianEstimator(memory) + _)
-
-
-
 
     println("report:\n" + report.pretty)
 

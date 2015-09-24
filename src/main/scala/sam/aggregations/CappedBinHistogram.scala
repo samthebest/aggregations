@@ -6,9 +6,9 @@ import scala.collection.mutable
 
 import CappedBinHistogram._
 
-class CappedBinHistogram(sizeLimit: Int,
-                         mergeStrategy: MergeStrategy = defaultMergeStrategy,
-                         private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
+case class CappedBinHistogram(sizeLimit: Int,
+                              mergeStrategy: MergeStrategy = defaultMergeStrategy,
+                              private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
   extends Aggregator[Map[(Long, Long), Long], Long, CappedBinHistogram] {
 
   def size: Int = m.size
@@ -38,9 +38,9 @@ class CappedBinHistogram(sizeLimit: Int,
 object CappedBinHistogram {
   val defaultMergeStrategy = mergeSmallestCountSum _
 
-  def mergeConsecutive[Rank : Ordering](m: mutable.Map[Long2, Long],
-                                        sizeLimit: Int,
-                                        ranker: List[(Long2, Long)] => Rank): mutable.Map[Long2, Long] = {
+  def mergeConsecutive[Rank: Ordering](m: mutable.Map[Long2, Long],
+                                       sizeLimit: Int,
+                                       ranker: List[(Long2, Long)] => Rank): mutable.Map[Long2, Long] = {
     if (m.size <= sizeLimit) m
     else {
       // TODO Optimization - We might be able to avoid this nested iteration
