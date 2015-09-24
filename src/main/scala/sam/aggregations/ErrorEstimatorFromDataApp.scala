@@ -47,9 +47,13 @@ object ErrorEstimatorFromDataApp {
             case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong / divisor))
           }
           .groupByKey().flatMap(_._2),
-        medianFac = (i: Int) => new MedianEstimator(i),
+        medianFac = new MedianEstimator(memory) + _,
         memoryCap = memory
       )
+
+    import Aggregator._
+    // Example of how to use API
+    val medianFac = new MedianEstimator(memory) & new MedianEstimator(memory) + (_: Long)
 
     println("report:\n" + report.pretty)
 

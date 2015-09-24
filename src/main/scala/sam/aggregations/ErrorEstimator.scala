@@ -27,15 +27,9 @@ import Aggregator._
 
 object ErrorEstimator {
   def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
-                                                                             medianFac: Int => M,
+                                                                             medianFac: Long => M,
                                                                              memoryCap: Int = 1000): Report = {
-    val createAggregator = (l: Long) => {
-      val m = medianFac(memoryCap)
-      m.update(l)
-      m
-    }
-
-    val estimates: RDD[(T, Double)] = testData.aggregateWith[Double, M](createAggregator).mapValues(_.result)
+    val estimates: RDD[(T, Double)] = testData.aggregateWith[Double, M](medianFac).mapValues(_.result)
 
     val correctMedianAndCounts: RDD[(T, (Double, Int))] =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
