@@ -29,7 +29,9 @@ trait Aggregator[+R, -V, A <: Aggregator[R, V, A]] { self: A =>
 // TODO Finish off this DSL - will be uber cool when finished.
 sealed trait MultiAggregator extends Product with Serializable
 
-final case class &&[H <: Aggregator[_, _, H], T <: MultiAggregator](head: H, tail: T)
+case object MultiAggregatorNil extends MultiAggregator
+
+final case class &&[H <: Aggregator[_, _, H], T <: MultiAggregator](head: H, tail: T) extends MultiAggregator
 
 object Aggregator {
   // TODO To avoid the createAggregator argument, we could use ad-hoc polymorphism to introduce a default
@@ -38,5 +40,9 @@ object Aggregator {
   implicit class PimpedRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggregateWith[R, A <: Aggregator[R, V, A]](createAggregator: V => A): RDD[(K, A)] =
       rdd.combineByKey(createAggregator, _ + _, _ + _)
+  }
+
+  implicit class PimpedAggregator[A <: Aggregator[_, _, A]](a: A) {
+    def &[B <: Aggregator[_, _, B]](b: B): &&[A, &&[B, MultiAggregatorNil.type]] = &&(a, &&(b, MultiAggregatorNil))
   }
 }

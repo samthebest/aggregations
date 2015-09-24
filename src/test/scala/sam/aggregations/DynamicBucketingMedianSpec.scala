@@ -11,7 +11,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       case ((r1, r2), count) => ((r1.toLong, r2.toLong), count.toLong)
     }
 
-      def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
+  def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
 
   basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
   sufficientMemoryProperties(i => new DynamicBucketingMedian(i))
@@ -199,10 +199,10 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
     "return correct median for really complicated overlapping case 5" in {
       medianFromBuckets(Map(
-                (1l, 10l) -> 15l,
-                (1l, 4l) -> 6l,
+        (1l, 10l) -> 15l,
+        (1l, 4l) -> 6l,
         (6l, 10l) -> 10l,
-                (10l, 12l) -> 40l,
+        (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
       )) must_=== 10.0
     }
@@ -271,7 +271,8 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
     "Correctly detach 4 range with count 5" in {
-      detachEndpoints((1l, 4l) -> 5l) must_=== List((1l, 1l) -> (1.0 + 3.0 / 4), (2l, 3l) -> (2 * 3.0 / 4), (4l, 4l) -> (1.0 + 3.0 / 4))
+      detachEndpoints((1l, 4l) -> 5l) must_===
+        List((1l, 1l) -> (1.0 + 3.0 / 4), (2l, 3l) -> (2 * 3.0 / 4), (4l, 4l) -> (1.0 + 3.0 / 4))
     }
   }
 
@@ -350,23 +351,25 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
 
     "Turn spread out pair into density correctly with simple double overlap" in {
-      countMapToDensity(List((0l, 4l) -> 4l, (4l, 4l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
-        (0l, 0l) -> (1.0 + 2.0 / 5),
-        (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
-        (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
-        (4l, 4l) -> (4.0 + 1.0 + 2.0 / 5)
-      )
+      countMapToDensity(List((0l, 4l) -> 4l, (4l, 4l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_===
+        List(
+          (0l, 0l) -> (1.0 + 2.0 / 5),
+          (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
+          (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
+          (4l, 4l) -> (4.0 + 1.0 + 2.0 / 5)
+        )
     }
 
     "Turn spread out pair into density correctly with greater than 2 counts and double overlap" in {
-      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
-        (0l, 0l) -> (1.0 + 2.0 / 5),
-        (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
-        (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
-        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
-        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
-        (7l, 7l) -> (1.0 + 2.0 / 4)
-      )
+      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_===
+        List(
+          (0l, 0l) -> (1.0 + 2.0 / 5),
+          (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
+          (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
+          (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
+          (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
+          (7l, 7l) -> (1.0 + 2.0 / 4)
+        )
     }
 
     "Disjointify two simple overlapping ranges" in {
