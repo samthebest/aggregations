@@ -8,23 +8,31 @@ import scala.reflect.ClassTag
   *
   * Unit return types is intentional and to highlight that it is not supposed to be used for pure functional
   * programming. This is because we wish to avoid memory allocation (and the consequent GC). */
-trait Aggregator[R, V, T <: Aggregator[R, V, T]] { self: T =>
+trait Aggregator[+R, -V, A <: Aggregator[R, V, A]] { self: A =>
   def update(e: V): Unit
-  def update(m: T): Unit
+  def update(m: A): Unit
   def result: R
 
-  def +(e: V): T = {
+  def +(e: V): A = {
     this.update(e)
     this
   }
 
-  def +(e: T): T = {
+  def +(e: A): A = {
     this.update(e)
     this
   }
 }
 
+// TODO Finish off this DSL - will be uber cool when finished.
+sealed trait MultiAggregator extends Product with Serializable
+
+final case class &&[H <: Aggregator[_, _, H], T <: MultiAggregator](head: H, tail: T)
+
 object Aggregator {
+  // TODO To avoid the createAggregator argument, we could use ad-hoc polymorphism to introduce a default
+  // type class that can be used to create the instance - it's then up to the user to create the type-class and
+  // ensure it's in scope.  We can then just specify the type of the thing we wish to aggregate!!
   implicit class PimpedRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggregateWith[R, A <: Aggregator[R, V, A]](createAggregator: V => A): RDD[(K, A)] =
       rdd.combineByKey(createAggregator, _ + _, _ + _)

@@ -11,7 +11,7 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
   implicit def toProp(m: MatchResult[Any]): Prop = resultProp(m)
 
-  def basicMedianSpecs[T <: Aggregator[T]](fac: () => T, desc: String = "ExactMedian"): Unit =
+  def basicMedianSpecs[T <: Aggregator[Double, Long, T]](fac: () => T, desc: String = "ExactMedian"): Unit =
     "Median aggregator " + desc should {
       "Throw exception when called with no update ever being called" in {
         val median = fac()
@@ -110,7 +110,7 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
     }
 
-  def sufficientMemoryProperties[T <: Aggregator[T]](memCappedFac: Int => T): Unit = {
+  def sufficientMemoryProperties[T <: Aggregator[Double, Long, T]](memCappedFac: Int => T): Unit = {
     "median with sufficient memory 1" should {
       implicit val arbitraryParams: Arbitrary[(Int, Int, Int)] = Arbitrary(
         for {
@@ -202,7 +202,7 @@ class MedianSpecUtils extends Specification with ScalaCheck {
     }
   }
 
-  def medianIsCommutative[T <: Aggregator[T]](memCappedFac: Int => T): Unit =
+  def medianIsCommutative[T <: Aggregator[Double, Long, T]](memCappedFac: Int => T): Unit =
     "Median" should {
       val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
       implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
