@@ -3,6 +3,8 @@ package sam.aggregations
 import scala.collection.mutable
 import RangeUtils._
 
+
+
 // TODO Chop up into smaller objects
 object DynamicBucketingMedian {
   type Long2 = (Long, Long)
@@ -165,7 +167,10 @@ object DynamicBucketingMedian {
             val innerIndex = count - reverseIndexInOverlap
             cumOverlapping.distribution.find(_._2 >= innerIndex) match {
               case Some(((lower, upper), density)) => (lower + upper).toDouble / 2
-              case None => throw new RuntimeException("Weird cumOveralpping = " + cumOverlapping + "\nm = " + m)
+                // This is probably caused by Double precision problem, should have a regression test for it
+                // might be able to reproduce using property based test
+              case None => throw new RuntimeException("Weird cumOveralpping = " + cumOverlapping +
+                "\ninnerIndex = " + innerIndex + "\ndistribution = " + cumOverlapping.distribution)
             }
         }
 
@@ -191,7 +196,8 @@ object DynamicBucketingMedian {
             val innerIndex = count - reverseIndexInOverlap
             cumOverlapping.distribution.find(_._2 >= innerIndex) match {
               case Some(((lower, upper), density)) => (lower + upper).toDouble / 2
-              case None => throw new RuntimeException("Weird cumOveralpping = " + cumOverlapping + "\nm = " + m)
+              case None => throw new RuntimeException("Weird cumOveralpping = " + cumOverlapping +
+                "\ninnerIndex = " + innerIndex + "\ndistribution = " + cumOverlapping.distribution)
             }
         }
     }
@@ -201,7 +207,7 @@ object DynamicBucketingMedian {
 import DynamicBucketingMedian._
 
 case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
-  extends Median[DynamicBucketingMedian] {
+  extends Aggregator[Double, Long, DynamicBucketingMedian] {
 
   def size: Int = m.size
   def getMap: Map[(Long, Long), Long] = m.toMap

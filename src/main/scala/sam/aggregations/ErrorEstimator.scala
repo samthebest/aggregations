@@ -23,28 +23,19 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
       "errorsAndNumExamples:\n" + errorsAndNumExamples.map(p => p._1.toString + "\t" + p._2).mkString("\n")
 }
 
+import Aggregator._
+
 object ErrorEstimator {
-  def fromTestData[T: ClassTag, M <: Median[M] : ClassTag](testData: RDD[(T, Long)],
-                                                           medianFac: Int => M,
-                                                           memoryCap: Int = 1000): Report = {
-    val estimates: RDD[(T, Double)] =
-      testData.combineByKey(
-        createCombiner = (l: Long) => {
-          val m = medianFac(memoryCap)
-          m.update(l)
-          m
-        },
-        mergeValue = (m: M, l: Long) => {
-          m.update(l)
-          m
-        },
-        mergeCombiners = (m1: M, m2: M) => {
-          m1.update(m2)
-          m1
-        },
-        numPartitions = 500
-      )
-      .mapValues(_.result)
+  def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
+                                                                             medianFac: Int => M,
+                                                                             memoryCap: Int = 1000): Report = {
+    val createAggregator = (l: Long) => {
+      val m = medianFac(memoryCap)
+      m.update(l)
+      m
+    }
+
+    val estimates: RDD[(T, Double)] = testData.aggregateWith[Double, M](createAggregator).mapValues(_.result)
 
     val correctMedianAndCounts: RDD[(T, (Double, Int))] =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
@@ -85,9 +76,10 @@ object ErrorEstimator {
     }
   }
 
-  def normalDistribution(median: Median[_], n: Int, max: Int): Double = relativeError(normalishSample(n, max), median)
+  def normalDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
+    relativeError(normalishSample(n, max), median)
 
-  def uniformDistribution(median: Median[_], n: Int, max: Int): Double =
+  def uniformDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
     relativeError((1 to n).map(_ => rand.nextInt(max).toLong), median)
 
   def correctMedian(numbers: Seq[Long]): Double = {
@@ -96,7 +88,7 @@ object ErrorEstimator {
     exactMedian.result
   }
 
-  def relativeError(numbers: Seq[Long], median: Median[_]): Double = {
+  def relativeError[M <: Aggregator[Double, Long, M]](numbers: Seq[Long], median: M): Double = {
     numbers.foreach(median.update)
     relativeError(median.result, correctMedian(numbers))
   }
