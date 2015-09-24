@@ -25,15 +25,6 @@ trait Aggregator[+R, V, A <: Aggregator[R, V, A]] { self: A =>
 
   def update(e: V*): Unit = Seq(e: _*).foreach(update)
 
-//  def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] =
-//    &&[V, A, MultiAggregator[V]](this, &&[V, B, MultiAggregator[V]](b, MultiAggregatorNil[V]()))
-
-  // This complex pattern matching is to ensure when we call result on a MultiAggregator we get a nice HList
-//  def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] = b match {
-//    case ma: MultiAggregator[V] => &&[V, A, MultiAggregator[V]](this, ma)
-//    case _ => &&[V, A, MultiAggregator[V]](this, &&[V, B, MultiAggregator[V]](b, MultiAggregatorNil[V]()))
-//  }
-
   def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] = b match {
     case ma: MultiAggregator[V] => &&[V, A, MultiAggregator[V]](this, ma)
     case _ => &&[V, A, MultiAggregator[V]](this, &&[V, B, MultiAggregator[V]](b, MultiAggregatorNil[V]()))
@@ -49,11 +40,6 @@ final case class RR[+H, T <: MultiResult](head: H, tail: T) extends MultiResult
 sealed trait MultiAggregator[V] extends Product with Serializable with Aggregator[MultiResult, V, MultiAggregator[V]] {
   // TODO We need to override & to make it so that the head is never a MutliAggregator - otherwise we will end up
   // with an unnecessary level of nesting
-
-//  override def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] = b match {
-//    case ma: MultiAggregator[V] => &&[V, MultiAggregator[V], MultiAggregator[V]](this, ma)
-//    case _ => &&[V, MultiAggregator[V], MultiAggregator[V]](this, &&[V, B, MultiAggregator[V]](b, MultiAggregatorNil[V]()))
-//  }
 }
 
 case class MultiAggregatorNil[V]() extends MultiAggregator[V] {
