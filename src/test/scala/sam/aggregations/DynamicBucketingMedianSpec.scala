@@ -79,115 +79,7 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
   }
 
-  "mergeSmallestConsecutive" should {
-    import DynamicBucketingMedian._
-
-    "do not mutate the map when is empty" in {
-      val emptyMap = mutable.Map.empty[(Long, Long), Long]
-      mergeBuckets(emptyMap, 1)
-      emptyMap must_=== mutable.Map.empty[(Long, Long), Long]
-    }
-
-    "do not mutate the map when is smaller or equals than sizeLimit" in {
-      "and have only one key" in {
-        def map = mutable.Map((1l, 1l) -> 1l)
-        mergeBuckets(map, 1) must_=== map
-      }
-
-      "and have 2 keys" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-        mergeBuckets(map, 2) must_=== map
-      }
-
-      "and have multiple keys" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l, (4l, 4l) -> 1l, (5l, 5l) -> 1l)
-        mergeBuckets(map, 5) must_=== map
-      }
-    }
-
-    "mutate in-place the specified mutable map" in {
-      val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-      mergeBuckets(map, 1)
-      map must_=== mutable.Map((1l, 2l) -> 2l)
-    }
-
-    "return the specified mutable map" in {
-      "when mutating" in {
-        val map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-        mergeBuckets(map, 1).equals(map.asInstanceOf[Any]) must_=== true
-      }
-
-      "when not mutating" in {
-        val map = mutable.Map((1l, 1l) -> 1l)
-        mergeBuckets(map, 1).equals(map.asInstanceOf[Any]) must_=== true
-      }
-    }
-
-    "merge the two consecutive pairs with the smallest joint size" in {
-      "when there are 2 buckets with limit of 1" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l)
-        mergeBuckets(map, 1) must_=== mutable.Map((1l, 2l) -> 2l)
-      }
-
-      "when there are 3 buckets with limit of 1" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l)
-        mergeBuckets(map, 1) must_=== mutable.Map((1l, 3l) -> 3l)
-      }
-
-      "when there are 3 buckets with limit of 2" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 1l, (3l, 3l) -> 1l)
-        mergeBuckets(map, 2) must_=== mutable.Map((1l, 2l) -> 2l, (3l, 3l) -> 1)
-      }
-
-      "when there are 7 unit buckets with limit of 1 with different counts but without gaps" in {
-        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 10l, (3l, 3l) -> 9l, (4l, 4l) -> 5l, (5l, 5l) -> 24l,
-          (6l, 6l) -> 1l, (7l, 7l) -> 18l)
-        val sum = map.values.sum
-        mergeBuckets(map, 1) must_=== mutable.Map((1l, 7l) -> sum)
-      }
-
-//      "when there are 7 unit buckets with limit of 4 with different counts but without gaps" in {
-//        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 10l, (3l, 3l) -> 9l,
-//          (4l, 4l) -> 5l, (5l, 5l) -> 24l, (6l, 6l) -> 1l, (7l, 7l) -> 18l)
-//
-//        mergeBuckets(map, 4) must_=== mutable.Map((1l, 2l) -> 11l, (3l, 4l) -> 14l,
-//          (5l, 6l) -> 25l, (7l, 7l) -> 18l)
-//      }
-
-//      "when there are 7 unit buckets with limit of 3 with different counts but without gaps" in {
-//        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 10l, (3l, 3l) -> 9l, (4l, 4l) -> 5l, (5l, 5l) -> 24l,
-//          (6l, 6l) -> 1l, (7l, 7l) -> 18l)
-//
-//        mergeBuckets(map, 3) must_=== mutable.Map((1l, 2l) -> 11l, (3l, 4l) -> 14l, (5l, 7l) -> 43l)
-//      }
-//
-//      "when there are 7 unit buckets with limit of 3 with different counts and gaps" in {
-//        def map = mutable.Map((1l, 1l) -> 1l, (2l, 2l) -> 10l, (3l, 3l) -> 9l, (14l, 14l) -> 5l, (16l, 16l) -> 24l,
-//          (26l, 26l) -> 1l, (30l, 30l) -> 18l)
-//
-//        mergeBuckets(map, 3) must_=== mutable.Map((1l, 3l) -> 20l, (14l, 16l) -> 29l, (26l, 30l) -> 19l)
-//      }
-
-      "when there are 7 buckets of different sizes with limit of 3 with different counts and gaps" in {
-        def map = mutable.Map((1l, 2l) -> 11l, (3l, 3l) -> 9l, (14l, 16l) -> 29l, (22l, 22l) -> 3l,
-          (26l, 26l) -> 1l, (30l, 32l) -> 18l)
-
-        mergeBuckets(map, 3) must_=== mutable.Map((1l, 3l) -> 20l, (14l, 16l) -> 29l, (22l, 32l) -> 22l)
-      }
-
-      "when 2 overlapping" in {
-        def map = mutable.Map((1l, 2l) -> 11l, (2l, 3l) -> 9l)
-        mergeBuckets(map, 1) must_=== mutable.Map((1l, 3l) -> 20l)
-      }
-
-      "when 3 overlapping with limit 2" in {
-        def map = mutable.Map((1l, 2l) -> 11l, (2l, 10l) -> 9l, (4l, 16l) -> 22l)
-        mergeBuckets(map, 2) must_=== mutable.Map((1l, 10l) -> 20l, (4l, 16l) -> 22l)
-      }
-    }
-  }
-
-  "mergeSmallestConsecutive" should {
+  "medianFromBuckets" should {
     "Find the middle range with correct counts, with 1 element Map" in {
       medianFromBuckets(Map((0l, 0l) -> 1l)) must_=== 0.0
     }
@@ -258,15 +150,9 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       medianFromBuckets(Map((1l, 2l) -> 10l, (2l, 3l) -> 10l)) must_=== 2.0
     }
 
-    // There is an excel sheet attached to http://10.65.12.238:8070/browse/SBPINSIGHTS-568 which helped me calculate
-    // these
     "return correct median for really complicated overlapping case 1" in {
       medianFromBuckets(Map(
-        //        (1l, 10l) -> 15l,
-        //        (1l, 4l) -> 6l,
         (4l, 15l) -> 20l,
-//        (6l, 10l) -> 10l,
-        //        (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
       )) must_=== (5 + 12) / 2.0
     }
@@ -293,35 +179,20 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )) must_=== 8.0
     }
 
-//    "Special case" in {
-//      medianFromBuckets(Map(
-//        (1l, 1l) -> 35l,
-////        (1l, 4l) -> 20l,
-//        (4l, 4l) -> 20l,
-//        (6l, 6l) -> 20l,
-//        (10l, 10l) -> 20l,
-//        (13l, 13l) -> 15l
-//      )) must_=== 8.0
-//    }
-
     "return correct median for really complicated overlapping case 3" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
         (4l, 15l) -> 20l,
         (6l, 10l) -> 10l,
-//        (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
       )) must_=== 8.0
     }
 
     "return correct median for really complicated overlapping case 4" in {
       medianFromBuckets(Map(
-//        (1l, 10l) -> 15l,
-//        (1l, 4l) -> 6l,
         (4l, 15l) -> 20l,
         (6l, 10l) -> 10l,
-        //        (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
       )) must_=== 10.0
     }
@@ -330,7 +201,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       medianFromBuckets(Map(
                 (1l, 10l) -> 15l,
                 (1l, 4l) -> 6l,
-//        (4l, 15l) -> 20l,
         (6l, 10l) -> 10l,
                 (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
@@ -341,65 +211,17 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
-        //        (4l, 15l) -> 20l,
         (6l, 10l) -> 10l,
-//        (10l, 12l) -> 40l,
         (13l, 15l) -> 5l
       )) must_=== 8.0
-      // )) must_=== 7.0
     }
 
     "return correct median for really complicated overlapping case 7" in {
       medianFromBuckets(Map(
         (1l, 10l) -> 15l,
         (1l, 4l) -> 6l,
-        //        (4l, 15l) -> 20l,
         (6l, 10l) -> 10l
-        //        (10l, 12l) -> 40l,
-//        (13l, 15l) -> 5l
       )) must_=== 6.0
-    }
-  }
-
-  "disjointify" should {
-    // TODO This isn't testing disjointify, it's testing countMapToDensity
-    "Disjointify two simple overlapping ranges" in {
-      disjointify(List(
-        (4l, 15l) -> 20l,
-        (13l, 15l) -> 5l
-      ).flatMap(detachEndpoints))
-      .groupBy(_._1).mapValues(_.map(_._2).sum).toList.sortBy(_._1._1) must_=== List(
-        (4l, 4l) -> 2.5,
-        (5l, 12l) -> 8 * 1.5,
-        (13l, 13l) -> 3.5,
-        (14l, 14l) -> 2.5,
-        (15l, 15l) -> 4.5
-      )
-    }
-
-    "Disjointify many overlapping ranges" in {
-      disjointify(List(
-        (1l, 10l) -> 15l,
-        (1l, 4l) -> 6l,
-        (4l, 15l) -> 20l,
-        (6l, 10l) -> 10l,
-        (10l, 12l) -> 40l,
-        (13l, 15l) -> 5l
-      ).flatMap(detachEndpoints))
-      .groupBy(_._1).mapValues(_.map(_._2).sum).mapValues(roundTo5).toList.sortBy(_._1._1) must_=== List(
-        (1l, 1l) -> 4.3,
-        (2l, 3l) -> 4.59999,
-        (4l, 4l) -> 5.8,
-        (5l, 5l) -> 2.8,
-        (6l, 6l) -> 5.4,
-        (7l, 9l) -> 13.2,
-        (10l, 10l) -> roundTo5(20.06666667),
-        (11l, 11l) -> roundTo5(14.16666667),
-        (12l, 12l) -> roundTo5(15.16666667),
-        (13l, 13l) -> 3.5,
-        (14l, 14l) -> 2.5,
-        (15l, 15l) -> 4.5
-      )
     }
   }
 
@@ -517,8 +339,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       )
     }
 
-
-
     "Turn spread out pair into density correctly with greater than 2 counts" in {
       countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
         (0l, 0l) -> (1.0 + 2.0 / 5),
@@ -546,6 +366,44 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
         (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
         (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
         (7l, 7l) -> (1.0 + 2.0 / 4)
+      )
+    }
+
+    "Disjointify two simple overlapping ranges" in {
+      countMapToDensity(List(
+        (4l, 15l) -> 20l,
+        (13l, 15l) -> 5l
+      )) must_=== List(
+        (4l, 4l) -> 2.5,
+        (5l, 12l) -> 8 * 1.5,
+        (13l, 13l) -> 3.5,
+        (14l, 14l) -> 2.5,
+        (15l, 15l) -> 4.5
+      )
+    }
+
+    "Disjointify many overlapping ranges" in {
+      // TODO I should use some `closeTo` matcher or something rather than using dodgy floating points
+      countMapToDensity(List(
+        (1l, 10l) -> 15l,
+        (1l, 4l) -> 6l,
+        (4l, 15l) -> 20l,
+        (6l, 10l) -> 10l,
+        (10l, 12l) -> 40l,
+        (13l, 15l) -> 5l
+      )) must_=== List(
+        (1l, 1l) -> 4.3,
+        (2l, 3l) -> 4.6,
+        (4l, 4l) -> 5.8,
+        (5l, 5l) -> 2.8,
+        (6l, 6l) -> 5.4,
+        (7l, 9l) -> 13.200000000000001,
+        (10l, 10l) -> 20.066666666666666,
+        (11l, 11l) -> 14.166666666666666,
+        (12l, 12l) -> 15.166666666666666,
+        (13l, 13l) -> 3.5,
+        (14l, 14l) -> 2.5,
+        (15l, 15l) -> 4.5
       )
     }
   }
