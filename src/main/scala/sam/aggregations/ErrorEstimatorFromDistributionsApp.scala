@@ -10,7 +10,7 @@ object ErrorEstimatorFromDistributionsApp {
         n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
         max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
       } yield {
-          val median = new DynamicBucketingMedian(limit)
+          val median = new MedianEstimator(limit)
           val error = ErrorEstimator.normalDistribution(median, n, max)
           println(s"(n, max) = ( $n , $max ), error: " + error)
           error
@@ -29,7 +29,7 @@ object ErrorEstimatorFromDistributionsApp {
         n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
         max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
       } yield {
-          val median = new DynamicBucketingMedian(limit)
+          val median = new MedianEstimator(limit)
           val error = ErrorEstimator.uniformDistribution(median, n, max)
           println(s"(n, max) = ( $n , $max ), error: " + error)
           error

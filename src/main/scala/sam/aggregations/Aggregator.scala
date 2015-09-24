@@ -27,11 +27,15 @@ trait Aggregator[+R, -V, A <: Aggregator[R, V, A]] { self: A =>
 }
 
 // TODO Finish off this DSL - will be uber cool when finished.
+
+// MultiAggregator should extend Aggregator, where the type of V is fixed, R is a "HList" (a MultiResult, no need to
+// make shapeless a dependency for just one thing)
+
 sealed trait MultiAggregator extends Product with Serializable
 
 case object MultiAggregatorNil extends MultiAggregator
 
-final case class &&[H <: Aggregator[_, _, H], T <: MultiAggregator](head: H, tail: T) extends MultiAggregator
+final case class &&[V, H <: Aggregator[_, V, H], T <: MultiAggregator](head: H, tail: T) extends MultiAggregator
 
 object Aggregator {
   // TODO To avoid the createAggregator argument, we could use ad-hoc polymorphism to introduce a default
@@ -42,7 +46,7 @@ object Aggregator {
       rdd.combineByKey(createAggregator, _ + _, _ + _)
   }
 
-  implicit class PimpedAggregator[A <: Aggregator[_, _, A]](a: A) {
-    def &[B <: Aggregator[_, _, B]](b: B): &&[A, &&[B, MultiAggregatorNil.type]] = &&(a, &&(b, MultiAggregatorNil))
+  implicit class PimpedAggregator[V, A <: Aggregator[_, V, A]](a: A) {
+    def &[B <: Aggregator[_, V, B]](b: B): &&[V, A, &&[V, B, MultiAggregatorNil.type]] = &&(a, &&(b, MultiAggregatorNil))
   }
 }

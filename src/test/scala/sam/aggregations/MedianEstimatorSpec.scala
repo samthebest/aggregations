@@ -1,11 +1,11 @@
 package sam.aggregations
 
-import sam.aggregations.DynamicBucketingMedian._
+import sam.aggregations.MedianEstimator._
 
 import scala.collection.mutable
 import scala.util.Try
 
-class DynamicBucketingMedianSpec extends MedianSpecUtils {
+class MedianEstimatorSpec extends MedianSpecUtils {
   def toLongMap(m: mutable.Map[(Int, Int), Int]): mutable.Map[(Long, Long), Long] =
     m.map {
       case ((r1, r2), count) => ((r1.toLong, r2.toLong), count.toLong)
@@ -13,63 +13,63 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
 
   def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
 
-  basicMedianSpecs(() => new DynamicBucketingMedian(10), "- DynamicBucketingMedian with enough memory")
-  sufficientMemoryProperties(i => new DynamicBucketingMedian(i))
+  basicMedianSpecs(() => new MedianEstimator(10), "- DynamicBucketingMedian with enough memory")
+  sufficientMemoryProperties(i => new MedianEstimator(i))
 
   "DynamicBucketingMedian" should {
     "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
-      val median = new DynamicBucketingMedian(1)
+      val median = new MedianEstimator(1)
       (1 to 2).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(1)
     }
 
     "Size should not exceed 2 when created with sizeLimit 2 and updated with 3 distinct elements" in {
-      val median = new DynamicBucketingMedian(2)
+      val median = new MedianEstimator(2)
       (1 to 3).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(2)
     }
 
     "Size should not exceed 10 when created with sizeLimit 10 and updated with 15 distinct elements" in {
-      val median = new DynamicBucketingMedian(10)
+      val median = new MedianEstimator(10)
       (1 to 15).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(10)
     }
 
     "Size should return 5 when created with sizeLimit 10 and updated with 5 distinct elements" in {
-      val median = new DynamicBucketingMedian(10)
+      val median = new MedianEstimator(10)
       (1 to 5).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(10)
     }
 
     "Can get correct answer compressing 3 points to 2" in {
-      val median = new DynamicBucketingMedian(2)
+      val median = new MedianEstimator(2)
       (1 to 3).map(_.toLong).foreach(median.update)
       median.result must_=== 2.0
     }
 
     "Can get correct answer compressing 3 points to 2" in {
-      val median = new DynamicBucketingMedian(2)
+      val median = new MedianEstimator(2)
       (2 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 3.0
     }
 
     "Can get correct answer compressing 4 points to 2" in {
-      val median = new DynamicBucketingMedian(2)
+      val median = new MedianEstimator(2)
       (1 to 4).map(_.toLong).foreach(median.update)
       median.result must_=== 2.5
     }
 
     "Can get correct answer based on regression test 1" in {
-      val median = new DynamicBucketingMedian(7)
+      val median = new MedianEstimator(7)
       List(4l, 10l, 5l, 10l).foreach(median.update)
       median.result must_=== 7.5
     }
 
     "Correctly merges two simple medians and gives correct estimation" in {
-      val median = new DynamicBucketingMedian(3)
+      val median = new MedianEstimator(3)
       median.update(1l, 2l, 3l, 4l)
 
-      val median2 = new DynamicBucketingMedian(1)
+      val median2 = new MedianEstimator(1)
       median2.update(1l, 6l)
 
       median.update(median2)
@@ -225,57 +225,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
   }
 
-  "detachEndpoints" should {
-    "Correctly detach trivial range with trivial count" in {
-      detachEndpoints((1l, 1l) -> 1l) must_=== List((1l, 1l) -> 1.0)
-    }
-
-    "Correctly detach trivial range with count 2" in {
-      detachEndpoints((1l, 1l) -> 2l) must_=== List((1l, 1l) -> 2.0)
-    }
-
-    "Correctly detach trivial range with count 3" in {
-      detachEndpoints((1l, 1l) -> 3l) must_=== List((1l, 1l) -> 3.0)
-    }
-
-    "Correctly throws exception for impossible case 1" in {
-      Try(detachEndpoints((1l, 2l) -> 1l)).isFailure must beTrue
-    }
-
-    "Correctly throws exception for impossible case 2" in {
-      Try(detachEndpoints((1l, 5l) -> 1l)).isFailure must beTrue
-    }
-
-    "Correctly detach pair range with count 2" in {
-      detachEndpoints((1l, 2l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 2l) -> 1.0)
-    }
-
-    "Correctly detach pair range with count 3" in {
-      detachEndpoints((1l, 2l) -> 3l) must_=== List((1l, 1l) -> 1.5, (2l, 2l) -> 1.5)
-    }
-
-    "Correctly detach 3 range with count 2" in {
-      detachEndpoints((1l, 3l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 2l) -> 0.0, (3l, 3l) -> 1.0)
-    }
-
-    "Correctly detach 3 range with count 5" in {
-      detachEndpoints((1l, 3l) -> 5l) must_=== List((1l, 1l) -> 2.0, (2l, 2l) -> 1.0, (3l, 3l) -> 2.0)
-    }
-
-    "Correctly detach 3 range with count 8" in {
-      detachEndpoints((1l, 3l) -> 8l) must_=== List((1l, 1l) -> 3.0, (2l, 2l) -> 2.0, (3l, 3l) -> 3.0)
-    }
-
-    "Correctly detach 4 range with count 2" in {
-      detachEndpoints((1l, 4l) -> 2l) must_=== List((1l, 1l) -> 1.0, (2l, 3l) -> 0.0, (4l, 4l) -> 1.0)
-    }
-
-    "Correctly detach 4 range with count 5" in {
-      detachEndpoints((1l, 4l) -> 5l) must_===
-        List((1l, 1l) -> (1.0 + 3.0 / 4), (2l, 3l) -> (2 * 3.0 / 4), (4l, 4l) -> (1.0 + 3.0 / 4))
-    }
-  }
-
   "mergeOverlappingInfo" should {
     "Not merge 2 non overlapping buckets" in {
       mergeOverlappingInfo(List((1l, 4l) -> 2l, (5l, 8l) -> 3l)) must_=== List(
@@ -319,95 +268,17 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
     }
   }
 
-  "countMapToDensity" should {
-    "Turn trivial map into density correctly" in {
-      countMapToDensity(List((0l, 1l) -> 2l)) must_===
-        List((0l, 0l) -> 1.0, (1l, 1l) -> 1.0)
-    }
-
-    "Turn simple pair into density correctly" in {
-      countMapToDensity(List((0l, 1l) -> 2l, (1l, 2l) -> 2l)) must_===
-        List((0l, 0l) -> 1.0, (1l, 1l) -> 2.0, (2l, 2l) -> 1.0)
-    }
-
-    "Turn spread out pair into density correctly" in {
-      countMapToDensity(List((0l, 4l) -> 2l, (4l, 7l) -> 2l)) must_=== List(
-        (0l, 0l) -> 1.0,
-        (1l, 3l) -> 0.0,
-        (4l, 4l) -> 2.0,
-        (5l, 6l) -> 0.0,
-        (7l, 7l) -> 1.0
-      )
-    }
-
-    "Turn spread out pair into density correctly with greater than 2 counts" in {
-      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l)).map(p => (p._1, roundTo5(p._2))) must_=== List(
-        (0l, 0l) -> (1.0 + 2.0 / 5),
-        (1l, 3l) -> roundTo5(0.0 + 2.0 * 3 / 5),
-        (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
-        (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
-        (7l, 7l) -> (1.0 + 2.0 / 4)
-      )
-    }
-
-    "Turn spread out pair into density correctly with simple double overlap" in {
-      countMapToDensity(List((0l, 4l) -> 4l, (4l, 4l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_===
-        List(
-          (0l, 0l) -> (1.0 + 2.0 / 5),
-          (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
-          (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
-          (4l, 4l) -> (4.0 + 1.0 + 2.0 / 5)
-        )
-    }
-
-    "Turn spread out pair into density correctly with greater than 2 counts and double overlap" in {
-      countMapToDensity(List((0l, 4l) -> 4l, (4l, 7l) -> 4l, (3l, 3l) -> 3l)).map(p => (p._1, roundTo5(p._2))) must_===
-        List(
-          (0l, 0l) -> (1.0 + 2.0 / 5),
-          (1l, 2l) -> roundTo5(0.0 + 2.0 * 2 / 5),
-          (3l, 3l) -> roundTo5(3.0 + 2.0 / 5),
-          (4l, 4l) -> (2.0 + 2.0 / 5 + 2.0 / 4),
-          (5l, 6l) -> (0.0 + 2.0 * 2 / 4),
-          (7l, 7l) -> (1.0 + 2.0 / 4)
-        )
-    }
-
-    "Disjointify two simple overlapping ranges" in {
-      countMapToDensity(List(
-        (4l, 15l) -> 20l,
-        (13l, 15l) -> 5l
-      )) must_=== List(
-        (4l, 4l) -> 2.5,
-        (5l, 12l) -> 8 * 1.5,
-        (13l, 13l) -> 3.5,
-        (14l, 14l) -> 2.5,
-        (15l, 15l) -> 4.5
-      )
-    }
-
-    "Disjointify many overlapping ranges" in {
-      // TODO I should use some `closeTo` matcher or something rather than using dodgy floating points
-      countMapToDensity(List(
-        (1l, 10l) -> 15l,
-        (1l, 4l) -> 6l,
-        (4l, 15l) -> 20l,
-        (6l, 10l) -> 10l,
-        (10l, 12l) -> 40l,
-        (13l, 15l) -> 5l
-      )) must_=== List(
-        (1l, 1l) -> 4.3,
-        (2l, 3l) -> 4.6,
-        (4l, 4l) -> 5.8,
-        (5l, 5l) -> 2.8,
-        (6l, 6l) -> 5.4,
-        (7l, 9l) -> 13.200000000000001,
-        (10l, 10l) -> 20.066666666666666,
-        (11l, 11l) -> 14.166666666666666,
-        (12l, 12l) -> 15.166666666666666,
-        (13l, 13l) -> 3.5,
-        (14l, 14l) -> 2.5,
-        (15l, 15l) -> 4.5
-      )
+  "medianFromOverlap" should {
+    "Handle edge case where we lose accuracy from floating point" in {
+      medianFromOverlap(
+        cumOverlapping = CumOverlapping(
+          lower = 13113l,
+          upper = 13228l,
+          count = 13l,
+          cumCount = 2932l,
+          overlappingMap = List(((13113l, 13200l), 6l), ((13163l, 13163l), 1l), ((13200l, 13228l), 6l))),
+        middleIndex = 2932l
+      ) must_=== 13228.0
     }
   }
 }

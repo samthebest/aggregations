@@ -47,7 +47,7 @@ object ErrorEstimatorFromDataApp {
             case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong / divisor))
           }
           .groupByKey().flatMap(_._2),
-        medianFac = (i: Int) => new DynamicBucketingMedian(i),
+        medianFac = (i: Int) => new MedianEstimator(i),
         memoryCap = memory
       )
 
