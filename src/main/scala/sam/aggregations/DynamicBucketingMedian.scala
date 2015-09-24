@@ -6,7 +6,7 @@ import RangeUtils._
 // TODO Chop up into smaller objects
 object DynamicBucketingMedian {
   // Core of the algorithm, this has the potential for a lot of variations
-  def mergeSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
+  def mergeBucketsSmallestConsecutive(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
     if (m.size <= sizeLimit) m
     else {
       // TODO We might be able to avoid this N^2 iteration
@@ -15,6 +15,46 @@ object DynamicBucketingMedian {
           m.toList.sortBy(_._1).sliding(2).minBy {
             case List((firstKey@(firstStart, _), _), (secondKey@(_, secondEnd), _)) =>
               (secondEnd - firstStart, firstKey, secondKey)
+          }
+
+        m -= firstRange
+        m -= secondRange
+
+        m += (firstStart, secondEnd) -> (firstCount + secondCount)
+      }
+      m
+    }
+  }
+
+  // We know that overlapping buckets cause the issues because we move from a nice discrete problem to a distribution problem
+  // but with enough data, we know we will always get overlapping buckets :(
+
+  // After enough data, we can be quite sure we can estimate the range, or at least that the median will end up within
+  // a specific interval
+
+  // What we need is not only a way to merge buckets, but a way to split overlapping buckets so that where the median is
+  // likely to be is kept disjoint
+
+  // .... hmmm, another approach which might have better statistical properties, might be to also favour roughly equal
+  // length buckets, since maybe in merging buckets together the actual mass becomes wildly different.  If they where
+  // roughly equal length then probability of the mass would be in the middle.
+
+  // When we compute the median it would be nice if we could throw away some of the data to try to split it
+
+  // Or we could still have a bug? Can we really have that much error? - I think we can have that much error
+
+  // Merge buckets that have the least amount of information in
+  def mergeBuckets(m: mutable.Map[(Long, Long), Long], sizeLimit: Int): mutable.Map[(Long, Long), Long] = {
+    if (m.size <= sizeLimit) m
+    else {
+      // TODO We might be able to avoid this N^2 iteration
+      (1 to (m.size - sizeLimit)).foreach { _ =>
+        val List((firstRange@(firstStart, _), firstCount), (secondRange@(_, secondEnd), secondCount)) =
+          m.toList.sortBy(_._1).sliding(2).minBy {
+            case List((firstKey@(firstStart, _), countLeft), (secondKey@(_, secondEnd), countRight)) =>
+              countLeft + countRight
+
+//              (secondEnd - firstStart, firstKey, secondKey)
           }
 
         m -= firstRange
@@ -107,10 +147,6 @@ object DynamicBucketingMedian {
   }
 
   def disjointify(endPointsDetached: List[(Long2, Double)]): List[(Long2, Double)] = {
-//    val ends: Set[Long] = endPointsDetached.toSet.flatMap {
-//      case ((lower, upper), density) => Set(lower, upper)
-//    }
-
     val lowerEnds = endPointsDetached.map(_._1._1).distinct
     val upperEnds = endPointsDetached.map(_._1._2).distinct
 
@@ -122,9 +158,6 @@ object DynamicBucketingMedian {
         ((lower, 0) +: (newLowerPoints ++ newUpperPoints).distinct.sorted :+ (upper, 1)).grouped(2).map {
           case List((newLower, _), (newUpper, _)) => splitRange(r, newLower, newUpper, origDensity)
         }
-
-//        Nil
-        // For all lowerEnds in the range (excluding lower) this is a break point
     }
   }
 
@@ -212,6 +245,7 @@ object DynamicBucketingMedian {
             val innerIndex = count - reverseIndexInOverlap
             cumOverlapping.distribution.find(_._2 >= innerIndex) match {
               case Some(((lower, upper), density)) => (lower + upper).toDouble / 2
+              case None => throw new RuntimeException("Weird cumOveralpping = " + cumOverlapping + "\nm = " + m)
             }
         }
 
@@ -224,11 +258,17 @@ object DynamicBucketingMedian {
             (start + end).toDouble / 2
           case (CumDisjoint(_, endLeft, _, _), CumDisjoint(startRight, _, _, _)) =>
             (endLeft + startRight).toDouble / 2
-          case (CumOverlapping(startLeft, endLeft, _, _, _), CumOverlapping(startRight, _, _, _, _))
-          if startLeft != startRight =>
+          case (CumDisjoint(_, endLeft, _, _), CumOverlapping(startRight, _, _, _, _)) =>
+            (endLeft + startRight).toDouble / 2
+          case (CumOverlapping(_, endLeft, _, _, _), CumDisjoint(startRight, _, _, _)) =>
+            (endLeft + startRight).toDouble / 2
+
+
+          case (CumOverlapping(startLeft, endLeft, _, _, _), CumOverlapping(startRight, _, _, _, _)) if startLeft != startRight =>
+//            println("Got here 1")
             (endLeft + startRight).toDouble / 2
           case (cumOverlapping@CumOverlapping(_, _, count, cumCount, dist), _) =>
-//            println("Got here")
+//            println("Got here 2")
             // I.e. how far back we need to go from the right hand side
             val reverseIndexInOverlap = cumCount - middleIndex
             // I.e. how far in we need to go
@@ -259,7 +299,7 @@ case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Lo
         m += key -> (count + 1)
       case None =>
         m += ((e, e) -> 1)
-        mergeSmallestConsecutive(m, sizeLimit)
+        mergeBuckets(m, sizeLimit)
     }
 
   def result: Double =
@@ -270,6 +310,6 @@ case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Lo
     other.getMap.foreach {
       case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
     }
-    mergeSmallestConsecutive(m, sizeLimit)
+    mergeBuckets(m, sizeLimit)
   }
 }

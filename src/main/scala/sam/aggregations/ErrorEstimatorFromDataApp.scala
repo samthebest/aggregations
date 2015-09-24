@@ -13,6 +13,11 @@ object ErrorEstimatorFromDataApp {
     //val testDataPath = args.headOption.getOrElse("/user/savagesa/median-test-data")
     val testDataPath = args(0)
     val memory = args(1).toInt
+    val divisor = args(2).toInt
+
+    println("divisor = " + divisor)
+    println("memory = " + memory)
+    println("testDataPath = " + testDataPath)
 
     def acceptanceTest(report: Report): Boolean = report.worstError <= 2.0 / memory && report.averageError <= 1.0 / memory
 
@@ -39,7 +44,7 @@ object ErrorEstimatorFromDataApp {
       ErrorEstimator.fromTestData(
         testData =
           sc.textFile(testDataPath).map(_.split("\t").toList).map {
-            case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong))
+            case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong / divisor))
           }
           .groupByKey().flatMap(_._2),
         medianFac = (i: Int) => new DynamicBucketingMedian(i),
