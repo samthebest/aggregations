@@ -6,7 +6,7 @@ The intention is to add many aggregations over time.  This code was motivated by
 
 ## MedianEstimator
 
-The current implementation allows for the potential to try many different strategies for merging bins in the underlying CappedBinHistogram to see which performs best.  The current merge strategy is quite simple and works for the aforementioned MVP. The use case was that we have many keys and we want to compute the median of the values for each key in a map-reduce job via sparks `combineByKey`.  When the number of values is 2 - 3 orders of magnitude greater than the memory limit given to the MedianEstimator performance starts to become unpredictable; a more complex merge strategy would need to be implemented.
+The current implementation allows for the potential to try many different strategies for merging bins in the underlying `CappedBinHistogram` to see which performs best.  The current merge strategy is quite simple and works for the aforementioned MVP. The use case was that we have many keys and we want to compute the median of the values for each key in a map-reduce job via sparks `combineByKey`.  When the number of values is 2 - 3 orders of magnitude greater than the memory limit given to the `MedianEstimator` performance starts to become unpredictable; another merge strategy would need to be tried.
 
 When this is run just as a sliding window, i.e. a non-parallelisable yet memory and speed efficient way to compute a median the accuracy is very good.
 
