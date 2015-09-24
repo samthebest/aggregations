@@ -3,57 +3,15 @@ package sam.aggregations
 import scala.collection.mutable
 import RangeUtils._
 
+object TypeAliases {
+  type Long2 = (Long, Long)
+  type MergeStrategy = (mutable.Map[Long2, Long], Int) => mutable.Map[Long2, Long]
+}
 
+import TypeAliases._
 
 // TODO Chop up into smaller objects
 object DynamicBucketingMedian {
-  type Long2 = (Long, Long)
-
-  // TODO DRY, introduce type MergeStrategy which is a function and then can make a param of Median
-  // TODO We could introduce an Aggregation "CappedHistogram", then the DynamyicBucketingMedian is just a wrap around
-  // TODO CappedHistorgram along with the conversion methods into a density function, could then be useful for estimating
-  // probability distributions
-  def mergeBucketsSmallestConsecutive(m: mutable.Map[Long2, Long], sizeLimit: Int): mutable.Map[Long2, Long] = {
-    if (m.size <= sizeLimit) m
-    else {
-      // TODO We might be able to avoid this N^2 iteration
-      (1 to (m.size - sizeLimit)).foreach { _ =>
-        val List((firstRange@(firstStart, _), firstCount), (secondRange@(_, secondEnd), secondCount)) =
-          m.toList.sortBy(_._1).sliding(2).minBy {
-            case List((firstKey@(firstStart, _), _), (secondKey@(_, secondEnd), _)) =>
-              (secondEnd - firstStart, firstKey, secondKey)
-          }
-
-        m -= firstRange
-        m -= secondRange
-
-        m += (firstStart, secondEnd) -> (firstCount + secondCount)
-      }
-      m
-    }
-  }
-
-  // Merge buckets that have the least amount of information in
-  def mergeBuckets(m: mutable.Map[Long2, Long], sizeLimit: Int): mutable.Map[Long2, Long] = {
-    if (m.size <= sizeLimit) m
-    else {
-      // TODO We might be able to avoid this N^2 iteration
-      (1 to (m.size - sizeLimit)).foreach { _ =>
-        val List((firstRange@(firstStart, _), firstCount), (secondRange@(_, secondEnd), secondCount)) =
-          m.toList.sortBy(_._1).sliding(2).minBy {
-            case List((firstKey@(firstStart, _), countLeft), (secondKey@(_, secondEnd), countRight)) =>
-              countLeft + countRight
-          }
-
-        m -= firstRange
-        m -= secondRange
-
-        m += (firstStart, secondEnd) -> (firstCount + secondCount)
-      }
-      m
-    }
-  }
-
   trait CumulatativeCount {
     val lower: Long
     val upper: Long
@@ -206,32 +164,19 @@ object DynamicBucketingMedian {
 
 import DynamicBucketingMedian._
 
-case class DynamicBucketingMedian(sizeLimit: Int, private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
+case class DynamicBucketingMedian(sizeLimit: Int)
   extends Aggregator[Double, Long, DynamicBucketingMedian] {
+  private[DynamicBucketingMedian] val hist: CappedBinHistogram = new CappedBinHistogram(sizeLimit)
 
-  def size: Int = m.size
-  def getMap: Map[(Long, Long), Long] = m.toMap
+  def size: Int = hist.size
 
-  def update(e: Long): Unit =
-    m.find {
-      case ((lower, upper), count) => lower <= e && e <= upper
-    } match {
-      case Some((key, count)) =>
-        m -= key
-        m += key -> (count + 1)
-      case None =>
-        m += ((e, e) -> 1)
-        mergeBuckets(m, sizeLimit)
-    }
+  def update(e: Long): Unit = hist.update(e)
 
-  def result: Double =
+  def result: Double = {
+    val m = hist.result
     if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
-    else medianFromBuckets(m.toMap)
-
-  def update(other: DynamicBucketingMedian): Unit = {
-    other.getMap.foreach {
-      case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
-    }
-    mergeBuckets(m, sizeLimit)
+    else medianFromBuckets(m)
   }
+
+  def update(a: DynamicBucketingMedian): Unit = hist.update(a.hist)
 }

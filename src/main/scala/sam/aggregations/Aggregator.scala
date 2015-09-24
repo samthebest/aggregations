@@ -10,7 +10,7 @@ import scala.reflect.ClassTag
   * programming. This is because we wish to avoid memory allocation (and the consequent GC). */
 trait Aggregator[+R, -V, A <: Aggregator[R, V, A]] { self: A =>
   def update(e: V): Unit
-  def update(m: A): Unit
+  def update(a: A): Unit
   def result: R
 
   def +(e: V): A = {
@@ -18,10 +18,12 @@ trait Aggregator[+R, -V, A <: Aggregator[R, V, A]] { self: A =>
     this
   }
 
-  def +(e: A): A = {
-    this.update(e)
+  def +(a: A): A = {
+    this.update(a)
     this
   }
+
+  def update(e: V*): Unit = Seq(e: _*).foreach(update)
 }
 
 // TODO Finish off this DSL - will be uber cool when finished.

@@ -23,12 +23,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       median.size must beLessThanOrEqualTo(1)
     }
 
-    "getMap correct when created with sizeLimit 1 and updated with 2 distinct elements" in {
-      val median = new DynamicBucketingMedian(1)
-      (1 to 2).map(_.toLong).foreach(median.update)
-      median.getMap must_=== Map((1l, 2l) -> 2l)
-    }
-
     "Size should not exceed 2 when created with sizeLimit 2 and updated with 3 distinct elements" in {
       val median = new DynamicBucketingMedian(2)
       (1 to 3).map(_.toLong).foreach(median.update)
@@ -45,18 +39,6 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       val median = new DynamicBucketingMedian(10)
       (1 to 5).map(_.toLong).foreach(median.update)
       median.size must beLessThanOrEqualTo(10)
-    }
-
-    "getMap returns a map with same size map as size" in {
-      val median = new DynamicBucketingMedian(2)
-      (1 to 3).map(_.toLong).foreach(median.update)
-      median.getMap.size must_=== median.size
-    }
-
-    "Can get correct map compressing 4 points to 2" in {
-      val median = new DynamicBucketingMedian(2)
-      (1 to 4).map(_.toLong).foreach(median.update)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l)
     }
 
     "Can get correct answer compressing 3 points to 2" in {
@@ -83,46 +65,15 @@ class DynamicBucketingMedianSpec extends MedianSpecUtils {
       median.result must_=== 7.5
     }
 
-    "Can get correct map based on regression test 1" in {
-      val median = new DynamicBucketingMedian(7)
-      List(4l, 10l, 5l, 10l).foreach(median.update)
-      median.getMap must_=== Map((4l, 4l) -> 1l, (10l, 10l) -> 2l, (5l, 5l) -> 1l)
-    }
-  }
-
-  "Merge update" should {
-    "work with trivial merging" in {
-      val median = new DynamicBucketingMedian(1)
-      median.update(1l)
-      median.update(2l)
-
-      val median2 = new DynamicBucketingMedian(1)
-      median2.update(1l)
-      median2.update(2l)
-
-      median.update(median2)
-
-      median.getMap must_=== Map((1l, 2l) -> 4l)
-    }
-
-    "Correctly merges identical buckets over close buckets and gives correct median" in {
+    "Correctly merges two simple medians and gives correct estimation" in {
       val median = new DynamicBucketingMedian(3)
-      median.update(1l)
-      median.update(2l)
-      median.update(3l)
-      median.update(4l)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
+      median.update(1l, 2l, 3l, 4l)
 
       val median2 = new DynamicBucketingMedian(1)
-      median2.update(1l)
-      median2.update(6l)
-      median2.getMap must_=== Map((1l, 6l) -> 2l)
+      median2.update(1l, 6l)
 
       median.update(median2)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 2l)
-
       median.update(median2)
-      median.getMap must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 4l)
 
       median.result must_=== 3.0
     }
