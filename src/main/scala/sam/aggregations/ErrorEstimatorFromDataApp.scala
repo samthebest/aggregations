@@ -1,5 +1,6 @@
 package sam.aggregations
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.util.Random
@@ -52,8 +53,19 @@ object ErrorEstimatorFromDataApp {
       )
 
     import Aggregator._
+
     // Example of how to use API
-    val medianFac = new MedianEstimator(memory) & new MedianEstimator(memory) + (_: Long)
+    val testData =
+      sc.textFile(testDataPath).map(_.split("\t").toList).map {
+        case key :: value :: Nil => (new Random().nextInt(15000), (key, value.toLong / divisor))
+      }
+      .groupByKey().flatMap(_._2)
+
+    val estimates =
+      testData.aggregateWith[MultiResult, MultiAggregator[Long]](new MedianEstimator(memory) & new MedianEstimator(memory) + _)
+
+
+
 
     println("report:\n" + report.pretty)
 
