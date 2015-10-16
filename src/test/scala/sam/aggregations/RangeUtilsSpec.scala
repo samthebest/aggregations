@@ -1,7 +1,7 @@
 package sam.aggregations
 
 import org.specs2.mutable.Specification
-import RangeUtils._
+import Utils._
 
 class RangeUtilsSpec extends Specification {
   sequential

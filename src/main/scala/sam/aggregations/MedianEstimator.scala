@@ -1,7 +1,7 @@
 package sam.aggregations
 
 import scala.collection.mutable
-import RangeUtils._
+import Utils._
 
 object TypeAliases {
   type Long2 = (Long, Long)

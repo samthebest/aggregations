@@ -12,22 +12,6 @@ case class Histogram[T: ClassTag]() extends Aggregator[Map[T, Long], T, Histogra
     case (key, value) => m.update(key, m.getOrElse(key, 0L) + value)
   }
 
-  // TODO Move all these into Utils then just have wrappers for convenience
-  def cumulativeDensity(m: List[(T, Long)]): List[(T, Long)] =
-    m.map(_._1).zip(m.drop(1).scanLeft(m.head._2)((cum, cur) => cum + cur._2))
-
-  def percentiles(implicit ordering: Ordering[T]): Array[T] = nthtiles(100)
-
-  def nthtiles(n: Int)(implicit ordering: Ordering[T]): Array[T] = {
-    val cumCounts = cumulativeDensity(result.toList.sortBy(_._1))
-    val total = cumCounts.last._2
-    val percentileSize = total.toDouble / n
-
-    cumCounts.foldLeft((Nil: List[T], 0)) {
-      case (cum@(cumPercentiles, curPercentile), (t, count)) =>
-        if (count > percentileSize * curPercentile) (t +: cumPercentiles, curPercentile + 1)
-        else cum
-    }
-    ._1.reverse.toArray
-  }
+  def percentiles(implicit ordering: Ordering[T]): Array[T] = Utils.percentiles(result.toList)
+  def nthtiles(n: Int)(implicit ordering: Ordering[T]): Array[T] = Utils.nthtiles(n, result.toList)
 }
