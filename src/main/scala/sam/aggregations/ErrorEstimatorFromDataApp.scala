@@ -3,6 +3,7 @@ package sam.aggregations
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
+import scala.collection
 import scala.util.Random
 
 // spark-submit --master yarn-client --driver-memory 10g --executor-memory 20g --executor-cores 10 --num-executors 5 \
@@ -19,7 +20,7 @@ object ErrorEstimatorFromDataApp {
     println("memory = " + memory)
     println("testDataPath = " + testDataPath)
 
-    def acceptanceTest(report: Report): Boolean = report.worstError <= 2.0 / memory && report.averageError <= 1.0 / memory
+    def acceptanceTest(report: FromTestDataReport): Boolean = report.worstError <= 2.0 / memory && report.averageError <= 1.0 / memory
 
     val confMap =
       Map(

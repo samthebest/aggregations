@@ -7,6 +7,19 @@ import org.specs2.mutable.Specification
 
 import scala.util.{Random, Success, Try}
 
+object MedianSpecUtils {
+  // Move to unit tests and wrap other code
+  def normalDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
+    ErrorEstimator.relativeError(ErrorEstimator.cappedNormal(max).sample(n), median)
+
+  val rand = new Random()
+
+  def uniformDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
+    ErrorEstimator.relativeError((1 to n).map(_ => rand.nextInt(max).toLong), median)
+}
+
+import MedianSpecUtils._
+
 class MedianSpecUtils extends Specification with ScalaCheck {
 
   implicit def toProp(m: MatchResult[Any]): Prop = resultProp(m)
@@ -125,7 +138,7 @@ class MedianSpecUtils extends Specification with ScalaCheck {
           params._2 <= params._1) ==> (params match {
           case (limit, n, max) =>
             val median = memCappedFac(limit)
-            ErrorEstimator.normalDistribution(median, n, max) must_=== 0.0
+            normalDistribution(median, n, max) must_=== 0.0
         }))
       
       "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {

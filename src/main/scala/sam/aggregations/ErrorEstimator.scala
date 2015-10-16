@@ -1,18 +1,20 @@
 package sam.aggregations
 
-import breeze.stats.distributions.Gaussian
+import breeze.stats.distributions.{Rand, Gaussian}
+import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.rdd.RDD
 
+import scala.collection.immutable.IndexedSeq
 import scala.reflect.ClassTag
 import scala.util.Random
 
-case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
-                  averageError: Double = 1.0,
-                  bestError: Double = 1.0,
-                  worstError: Double = 1.0,
-                  averageNumExamples: Int = 0,
-                  mostNumExamples: Int = 0,
-                  leastNumExamples: Int = 0) {
+case class FromTestDataReport(errorsAndNumExamples: List[(Double, Int)] = Nil,
+                              averageError: Double = 1.0,
+                              bestError: Double = 1.0,
+                              worstError: Double = 1.0,
+                              averageNumExamples: Int = 0,
+                              mostNumExamples: Int = 0,
+                              leastNumExamples: Int = 0) {
   def pretty: String =
     "Average Error: " + averageError + "\n" +
       "Best Error: " + bestError + "\n" +
@@ -23,13 +25,40 @@ case class Report(errorsAndNumExamples: List[(Double, Int)] = Nil,
       "errorsAndNumExamples:\n" + errorsAndNumExamples.map(p => p._1.toString + "\t" + p._2).mkString("\n")
 }
 
+case class TestCase(totalDataPoints: Int, memoryLimit: Int)
+
+case class FromDummyDataReport(totalDataPoints: Int,
+                               memoryLimit: Int,
+                               averageError: Double,
+                               bestError: Double,
+                               worstError: Double,
+                               averageDistinctCounts: Double,
+                               errorsAndDistinctCounts: List[(Double, Int)]) {
+  def toTSV: String = productIterator.toList.dropRight(1).mkString("\t") + "\t" +
+    errorsAndDistinctCounts.map(_.productIterator.mkString(",")).mkString("\t")
+}
+
+object FromDummyDataReport {
+  def apply(totalDataPoints: Int,
+            memoryLimit: Int,
+            errorsAndDistinctCounts: List[(Double, Int)]): FromDummyDataReport = FromDummyDataReport(
+    totalDataPoints = totalDataPoints,
+    memoryLimit = memoryLimit,
+    averageError = errorsAndDistinctCounts.map(_._1).sum / errorsAndDistinctCounts.map(_._1).size,
+    bestError = errorsAndDistinctCounts.map(_._1).min,
+    worstError = errorsAndDistinctCounts.map(_._1).max,
+    averageDistinctCounts = errorsAndDistinctCounts.map(_._2).sum.toDouble / errorsAndDistinctCounts.map(_._2).size,
+    errorsAndDistinctCounts = errorsAndDistinctCounts
+  )
+}
+
 import Aggregator._
 
 object ErrorEstimator {
   def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
                                                                              medianFac: Long => M,
-                                                                             memoryCap: Int = 1000): Report = {
-    val estimates: RDD[(T, Double)] = testData.aggregateWith[Double, M](medianFac).mapValues(_.result)
+                                                                             memoryCap: Int = 1000): FromTestDataReport = {
+    val estimates: RDD[(T, Double)] = testData.aggByKey[Double, M](medianFac).mapValues(_.result)
 
     val correctMedianAndCounts: RDD[(T, (Double, Int))] =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
@@ -47,8 +76,8 @@ object ErrorEstimator {
 
     val size = errorsAndNumExamples.size
 
-    if (size == 0) Report()
-    else Report(
+    if (size == 0) FromTestDataReport()
+    else FromTestDataReport(
       errorsAndNumExamples = errorsAndNumExamples,
       averageError = errors.sum / size,
       bestError = errors.min,
@@ -58,23 +87,6 @@ object ErrorEstimator {
       leastNumExamples = numExamples.min
     )
   }
-
-  val rand = new Random()
-
-  def normalishSample(n: Int, max: Int): IndexedSeq[Long] = {
-    val dist = new Gaussian(max / 2.0, max / 6.0)
-    (1 to n).map(_ => math.floor(dist.draw())).map {
-      case i if i < 0 => 0L
-      case i if i > max => max.toLong
-      case i => i.toLong
-    }
-  }
-
-  def normalDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
-    relativeError(normalishSample(n, max), median)
-
-  def uniformDistribution[M <: Aggregator[Double, Long, M]](median: M, n: Int, max: Int): Double =
-    relativeError((1 to n).map(_ => rand.nextInt(max).toLong), median)
 
   def correctMedian(numbers: Seq[Long]): Double = {
     val exactMedian = new ExactMedian()
@@ -88,4 +100,66 @@ object ErrorEstimator {
   }
 
   def relativeError(estimate: Double, correct: Double): Double = math.abs(correct - estimate) / correct
+
+  val medianFac = MedianEstimator.apply _
+
+  def cappedNormal(cap: Int): Rand[Long] = new Gaussian(cap / 2.0, cap / 6.0).map(math.floor).map {
+    case i if i < 0 => 0L
+    case i if i > cap => cap.toLong
+    case i => i.toLong
+  }
+
+  def runExperimentsSlidingWindow(cases: Iterator[TestCase],
+                                  runs: Int = 100,
+                                  rand: Rand[Long] = cappedNormal(10000)): Iterator[FromDummyDataReport] =
+    cases.map {
+      case TestCase(totalDataPoints, memoryLimit) =>
+        FromDummyDataReport(
+          totalDataPoints = totalDataPoints,
+          memoryLimit = memoryLimit,
+          errorsAndDistinctCounts =
+            (1 to runs)
+            .map(_ => rand.sample(totalDataPoints).toList)
+            .map(data => (ErrorEstimator.relativeError(data, medianFac(memoryLimit)), data.distinct.size)).toList
+        )
+    }
+
+  def randomiseRDD[T](rdd: RDD[T]): RDD[T] =
+    rdd.map((new Random().nextInt(), _)).partitionBy(new HashPartitioner(rdd.partitions.length)).map(_._2)
+
+  // TODO Forgot to do this TDD cos I thought it was gona be much simpler.
+  def runExperimentsMapReduce(cases: Iterator[TestCase],
+                              sc: SparkContext,
+                              runs: Int = 100,
+                              rand: Rand[Long] = cappedNormal(10000),
+                              partitions: Int = 100): Array[FromDummyDataReport] =
+    randomiseRDD(sc.makeRDD(cases.toSeq, partitions).flatMap {
+      case testCase@TestCase(totalDataPoints, memoryLimit) =>
+        (1 to runs).flatMap(run => {
+          val data = rand.sample(totalDataPoints).toList
+          val distinctCount = data.distinct.size
+          data.map((TestCaseKey(testCase, run, distinctCount, correctMedian(data)), _))
+        })
+        .map(kv => (kv._1, new MedianEstimator(memoryLimit) + kv._2))
+    })
+    .mapPartitions(_.toList.groupBy(_._1).mapValues(_.map(_._2).reduce(_ + _)).toIterator)
+    .reduceByKey(_ + _)
+    .map {
+      case (TestCaseKey(testCase, run, distinctCount, correctMedian), median) => testCase ->(distinctCount, correctMedian, median)
+    }
+    .groupByKey().map {
+      case (TestCase(totalDataPoints, memoryLimit), results) => FromDummyDataReport(
+        totalDataPoints = totalDataPoints,
+        memoryLimit = memoryLimit,
+        errorsAndDistinctCounts =
+          results.map {
+            case (distinctCount, correctMedian, median) =>
+              (relativeError(median.result, correctMedian), distinctCount)
+          }
+          .toList
+      )
+    }
+    .collect()
 }
+
+case class TestCaseKey(testCase: TestCase, run: Int, distinctCount: Int, correctMedian: Double)

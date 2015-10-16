@@ -65,7 +65,7 @@ final case class &&[V, H <: Aggregator[_, V, H], T <: MultiAggregator[V]](head: 
 
 object Aggregator {
   implicit class PimpedRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
-    def aggregateWith[R, A <: Aggregator[R, V, A]](createAggregator: V => A): RDD[(K, A)] =
+    def aggByKey[R, A <: Aggregator[R, V, A]](createAggregator: V => A): RDD[(K, A)] =
       rdd.combineByKey(createAggregator, _ + _, _ + _)
   }
 }
