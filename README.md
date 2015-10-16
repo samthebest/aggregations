@@ -58,7 +58,7 @@ This is the underlying structure that is used by the `MedianEstimator`, but is a
  - Improve the evaluation framework to do Spark MR jobs locally based on dummy data
  - Implement Percentiles (given a capped histogram)
  - Visualise some performance graphs - we essentially have 4 variables, Memory, Error, Data size (by key), distinct values
- - experimenting with merge strategies to improve accuracy, I think there exists a way that has very high probability of being exact
+ - experimenting with merge strategies to improve accuracy, I think there exists a way that has very high probability of being exact. Also consider using existing implementations of things, like https://github.com/HdrHistogram/HdrHistogram, check memory is similar and observe performance.
  - experimenting with more interesting distributions (at the moment evaluation framework only uses Normal, Uniform)
  - Finish off loose ends with DSL
  - Attach a profiler to validate memory consumption of various approaches
