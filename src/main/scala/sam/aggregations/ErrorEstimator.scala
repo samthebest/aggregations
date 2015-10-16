@@ -124,19 +124,19 @@ object ErrorEstimator {
         )
     }
 
-  def randomiseRDD[T](rdd: RDD[T]): RDD[T] =
+  def randomiseRDD[T: ClassTag](rdd: RDD[T]): RDD[T] =
     rdd.map((new Random().nextInt(), _)).partitionBy(new HashPartitioner(rdd.partitions.length)).map(_._2)
 
   // TODO Forgot to do this TDD cos I thought it was gona be much simpler.
   def runExperimentsMapReduce(cases: Iterator[TestCase],
                               sc: SparkContext,
                               runs: Int = 100,
-                              rand: Rand[Long] = cappedNormal(10000),
+                              rand: () => Rand[Long] = () => cappedNormal(10000),
                               partitions: Int = 100): Array[FromDummyDataReport] =
     randomiseRDD(sc.makeRDD(cases.toSeq, partitions).flatMap {
       case testCase@TestCase(totalDataPoints, memoryLimit) =>
         (1 to runs).flatMap(run => {
-          val data = rand.sample(totalDataPoints).toList
+          val data = rand().sample(totalDataPoints).toList
           val distinctCount = data.distinct.size
           data.map((TestCaseKey(testCase, run, distinctCount, correctMedian(data)), _))
         })
