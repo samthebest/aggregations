@@ -1,46 +1,25 @@
 package sam.aggregations
 
 import breeze.stats.distributions.{Gaussian, Rand}
+import org.rogach.scallop.ScallopConf
 
 // Only runs for the sliding window mode.
 object ErrorEstimatorFromDistributionsApp {
   def main(args: Array[String]): Unit = {
-
-    for (limit <- List(20, 50, 100, 500)) {
-      println("\n\nLimit = " + limit)
-      val errors = for {
-        n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
-        max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
-      } yield {
-          val median = new MedianEstimator(limit)
-          val error = ErrorEstimator.normalDistribution(median, n, max)
-          println(s"(n, max) = ( $n , $max ), error: " + error)
-          error
-        }
-
-      println("\nError Average = " + (errors.sum / errors.size))
-      println("Worst Error = " + errors.max)
-      println("Best Error = " + errors.min)
+    val conf = new ScallopConf() {
+      val runs = opt[Int](default = Some(10), descr = "Number of runs", validate = _ > 0)
     }
 
-    println("\n\nUNIFORM")
-
-    for (limit <- List(20, 50, 100, 500)) {
-      println("\n\nLimit = " + limit)
-      val errors = for {
-        n <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if limit < n
-        max <- List(10, 20, 50, 100, 200, 300, 1000, 10000, 100000)
-      } yield {
-          val median = new MedianEstimator(limit)
-          val error = ErrorEstimator.uniformDistribution(median, n, max)
-          println(s"(n, max) = ( $n , $max ), error: " + error)
-          error
-        }
-
-      println("\nError Average = " + (errors.sum / errors.size))
-      println("Worst Error = " + errors.max)
-      println("Best Error = " + errors.min)
-    }
+    SlidingWindowErrorEstimator.testCases(
+      cases =
+        (for {
+          memoryLimit <- List(20, 50, 100, 500)
+          totalDataPoints <- List(10, 20, 50, 100, 200, 300, 1000, 2000, 3000, 4000, 10000) if totalDataPoints > memoryLimit
+        } yield TestCase(totalDataPoints, memoryLimit))
+        .toIterator,
+      runs = conf.runs()
+    )
+    .map(_.toTSV).foreach(println)
   }
 }
 
@@ -80,7 +59,7 @@ object SlidingWindowErrorEstimator {
     case i => i.toLong
   }
 
-  def testCases(cases: Iterable[TestCase], runs: Int = 100, rand: Rand[Long] = cappedNormal(10000)): Iterable[Result] =
+  def testCases(cases: Iterator[TestCase], runs: Int = 100, rand: Rand[Long] = cappedNormal(10000)): Iterator[Result] =
     cases.map {
       case TestCase(totalDataPoints, memoryLimit) =>
         Result(
