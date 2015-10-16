@@ -13,8 +13,9 @@ libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.12.1" % "test" withSources() withJavadoc(),
   "org.specs2" %% "specs2-core" % "2.4.15" % "test" withSources() withJavadoc(),
   "org.specs2" %% "specs2-scalacheck" % "2.4.15" % "test" withSources() withJavadoc(),
-  "org.scalanlp" %% "breeze" % "0.11.2",
-  "org.scalanlp" %% "breeze-natives" % "0.11.2",
+  "org.scalanlp" %% "breeze" % "0.11.2" withSources() withJavadoc(),
+  "org.scalanlp" %% "breeze-natives" % "0.11.2" withSources() withJavadoc(),
+  "org.rogach" %% "scallop" % "0.9.5" withSources() withJavadoc(),
   // For some reason omitting spark-sql causes crazy exceptions ... *tut* *tut* typical
   ("org.apache.spark" % "spark-sql_2.10" % "1.3.0-cdh5.4.2") withSources() withJavadoc(),
   ("org.apache.spark" % "spark-core_2.10" % "1.3.0-cdh5.4.2") withSources() withJavadoc(),

@@ -12,6 +12,7 @@ object StaticSparkContext {
 import StaticSparkContext._
 
 class ErrorEstimatorSpecs extends Specification with Serializable {
+  sequential
 
   case class MockMedian(fixedResult: Double) extends Aggregator[Double, Long, MockMedian] {
     def result: Double = fixedResult
