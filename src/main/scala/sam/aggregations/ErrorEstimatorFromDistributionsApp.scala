@@ -6,7 +6,7 @@ import org.rogach.scallop.ScallopConf
 // Only runs for the sliding window mode.
 object ErrorEstimatorFromDistributionsApp {
   def main(args: Array[String]): Unit = {
-    val conf = new ScallopConf() {
+    val conf = new ScallopConf(args) {
       val runs = opt[Int](default = Some(10), descr = "Number of runs", validate = _ > 0)
     }
 
@@ -32,7 +32,7 @@ case class Result(totalDataPoints: Int,
                   worstError: Double,
                   averageDistinctCounts: Double,
                   errorsAndDistinctCounts: List[(Double, Int)]) {
-  def toTSV: String = productIterator.toList.dropRight(1).mkString("\t") +
+  def toTSV: String = productIterator.toList.dropRight(1).mkString("\t") + "\t" +
     errorsAndDistinctCounts.map(_.productIterator.mkString(",")).mkString("\t")
 }
 
