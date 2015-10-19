@@ -22,6 +22,7 @@ object Utils {
   def nthtiles[T: ClassTag](n: Int, l: List[(T, Long)])(implicit ordering: Ordering[T]): Array[T] = {
     val cumCounts = cumulativeDensity(l.sortBy(_._1))
     val total = cumCounts.last._2
+    require(total >= n, "nthtiles don't make sense if we have less data points than n")
     val percentileSize = total.toDouble / n
 
     cumCounts.foldLeft((Nil: List[T], 0)) {
