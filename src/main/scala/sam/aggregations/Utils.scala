@@ -19,6 +19,8 @@ object Utils {
 
   def percentiles[T: ClassTag](l: List[(T, Long)])(implicit ordering: Ordering[T]): Array[T] = nthtiles(100, l)
 
+  // TODO Unit tests for case when total < n
+  // TODO Think about case when num cumCounts.size < n, unit test
   def nthtiles[T: ClassTag](n: Int, l: List[(T, Long)])(implicit ordering: Ordering[T]): Array[T] = {
     val cumCounts = cumulativeDensity(l.sortBy(_._1))
     val total = cumCounts.last._2
