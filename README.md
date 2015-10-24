@@ -2,7 +2,8 @@
 
 Fast accurate low memory type-safe aggregations DSL for Spark
 
-The intention is to add many aggregations over time.  This code was motivated by an MVP which required a way to approximate a median in a single pass and without doing a full sort.  So at the moment we just have a median estimator and it's underlying structure, a capped size bin histogram.
+The intention is to add many aggregations over time.  This code was motivated by an MVP which required a way to approximate a median in a single pass and without doing a full sort.  
+So at the moment we just have a median estimator and it's underlying structure, a capped size bin histogram.
 
 ## MedianEstimator
 
