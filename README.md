@@ -55,7 +55,7 @@ This is the underlying structure that is used by the `MedianEstimator`, but is a
 
 ## Histogram
 
-Just a regular histogram.
+Just a regular count histogram.
 
 ## TODOS
 
