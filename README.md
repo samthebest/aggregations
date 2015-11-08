@@ -60,6 +60,8 @@ Just a regular count histogram.
 ## TODOS
 
  - Add all the usual easy to implement Aggregations, like Sum, Average, Max, Min, Top-K, Bottom-K.
+ - A way to approximate the absalute deviation from the mean
+ - A way to approximate the absalute deviation from the median
  - Add the CappedSet from my dump repo
  - Rename the Histogram to a CountHistogram, and add a regular SumHistogram (so adds the values)
  - Implement BinaryLabelCount aggregations, then ultimately update https://github.com/samthebest/sceval/blob/master/src/main/scala/sam/sceval/BinaryConfusionMatrix.scala to use it
