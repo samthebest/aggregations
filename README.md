@@ -60,7 +60,10 @@ Just a regular count histogram.
 ## TODOS
 
  - Add all the usual easy to implement Aggregations, like Sum, Average, Max, Min, Top-K, Bottom-K.
- - A way to approximate the absalute deviation from the mean
+ - A way to approximate the absalute deviation from the mean 
+http://stackoverflow.com/questions/3903538/online-algorithm-for-calculating-absolute-deviation
+http://stats.stackexchange.com/questions/3377/online-algorithm-for-mean-absolute-deviation-and-large-data-set
+http://www.stat.cmu.edu/~ryantibs/median/
  - A way to approximate the absalute deviation from the median
  - Add the CappedSet from my dump repo
  - Rename the Histogram to a CountHistogram, and add a regular SumHistogram (so adds the values)
