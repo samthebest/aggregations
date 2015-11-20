@@ -7,12 +7,12 @@ class ExactHistogramSpec extends Specification {
 
   "ExactHistogram" should {
     "Return an empty Map if not updated" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       hist.result must_=== Map.empty
     }
 
     "Return correct map when updated with some interesting data" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       hist.update(1L)
       hist.update(2L)
       hist.update(5L)
@@ -29,7 +29,7 @@ class ExactHistogramSpec extends Specification {
     }
 
     "Return correct map when updated with another interesting map" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       hist.update(1L)
       hist.update(2L)
       hist.update(5L)
@@ -38,7 +38,7 @@ class ExactHistogramSpec extends Specification {
       hist.update(5L)
       hist.update(7L)
 
-      val hist2 = Histogram[Long]()
+      val hist2 = CountHistogram[Long]()
       hist2.update(1L)
       hist2.update(2L)
       hist2.update(5L)
@@ -58,44 +58,44 @@ class ExactHistogramSpec extends Specification {
     }
 
     "Returns correct percentiles given values 1 to 100 once" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       (1 to 100).map(_.toLong).foreach(hist.update)
       hist.percentiles.toList must_=== (1 to 100).map(_.toLong).toList
     }
 
     "Returns correct percentiles given values 1 to 100 twice" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       (1 to 100).map(_.toLong).foreach(hist.update)
       (1 to 100).map(_.toLong).foreach(hist.update)
       hist.percentiles.toList must_=== (1 to 100).map(_.toLong).toList
     }
 
     "Returns correct percentiles given values 1 to 200" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       (1 to 200).map(_.toLong).foreach(hist.update)
       hist.percentiles.toList must_=== (1 to 100).map(_.toLong * 2 - 1).toList
     }
 
     "Returns correct quartiles given values 1 to 4 once" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       (1 to 4).map(_.toLong).foreach(hist.update)
       hist.nthtiles(4).toList must_=== (1 to 4).map(_.toLong).toList
     }
 
     "Returns correct quartiles given values 1 to 8 once" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       (1 to 8).map(_.toLong).foreach(hist.update)
       hist.nthtiles(4).toList must_=== List(1, 3, 5, 7)
     }
 
     "Returns correct quartiles given values 1, 2, 2, 6, 6, 7, 7, 7" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       List(1, 2, 2, 6, 6, 7, 7, 7).map(_.toLong).foreach(hist.update)
       hist.nthtiles(4).toList must_=== List(1, 2, 6, 7)
     }
 
     "Returns correct quartiles given values 1, 2, 2, 6, 6, 7, 7, 7, 8, 8, 8, 8" in {
-      val hist = Histogram[Long]()
+      val hist = CountHistogram[Long]()
       List(1, 2, 2, 6, 6, 7, 7, 7, 8, 8, 8, 8).map(_.toLong).foreach(hist.update)
       hist.nthtiles(4).toList must_=== List(1, 6, 7, 8)
     }
