@@ -59,19 +59,18 @@ Just a regular count histogram.
 
 ## TODOS
 
- - Add all the usual easy to implement Aggregations, like Sum, Average, Max, Min, Top-K, Bottom-K.
+ - Add all the usual easy to implement Aggregations, like Sum, Average, Max, Min, Top-K, Bottom-K, SumHistogram.
  - A way to approximate the absalute deviation from the mean 
 http://stackoverflow.com/questions/3903538/online-algorithm-for-calculating-absolute-deviation
 http://stats.stackexchange.com/questions/3377/online-algorithm-for-mean-absolute-deviation-and-large-data-set
 http://www.stat.cmu.edu/~ryantibs/median/
  - A way to approximate the absalute deviation from the median
  - Add the CappedSet from my dump repo
- - Rename the Histogram to a CountHistogram, and add a regular SumHistogram (so adds the values)
  - Implement BinaryLabelCount aggregations, then ultimately update https://github.com/samthebest/sceval/blob/master/src/main/scala/sam/sceval/BinaryConfusionMatrix.scala to use it
  - Implement AggRDD, an RDD where you have told it to do some aggregation, you can then `map`, `flatMap` (start with `flatMap`) it etc and then when `collect` or `saveToTextFile` is finally called it will perform both of the aggregations and the `flatMap`s at the same time.  E.g. suppose you want to count a dataset and also filter out nulls, and write to disk, the current Spark API kind of requires two passes, where we could cache in memory, the only other thing we can do is use an accumulator, which is horrible.  Would be nice to sort out some API where we do this kind of thing "immutably" and "safely typed".
+ - Similarly-ish a way to do two levels of aggregation - at the key level, then at the global level (leading from this might be able to do N-levels!)
  - Visualise some performance graphs - we essentially have 4 variables, Memory, Error, Data size (by key), distinct values
  - experimenting with merge strategies to improve accuracy, I think there exists a way that has very high probability of being exact. Also consider using existing implementations of things, like https://github.com/HdrHistogram/HdrHistogram, check memory is similar and observe performance.
  - experimenting with more interesting distributions (at the moment evaluation framework only uses Normal, Uniform), we particularly need to explore distributions where the masses are far away from the median.
- - Finish off loose ends with DSL
  - Attach a profiler to validate memory consumption of various approaches
  - Refactor the Median logic and stuff to handle nthtiles

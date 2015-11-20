@@ -8,7 +8,9 @@ import scala.reflect.ClassTag
   *
   * Unit return types is intentional and to highlight that it is not supposed to be used for pure functional
   * programming. This is because we wish to avoid memory allocation (and the consequent GC). */
-trait Aggregator[+R, V, A <: Aggregator[R, V, A]] { self: A =>
+trait Aggregator[+R, V, A <: Aggregator[R, V, A]] {
+  self: A =>
+
   def update(e: V): Unit
   def update(a: A): Unit
   def result: R
@@ -38,14 +40,16 @@ case object MultiResultNil extends MultiResult
 final case class RR[+H, T <: MultiResult](head: H, tail: T) extends MultiResult
 
 sealed trait MultiAggregator[V] extends Product with Serializable with Aggregator[MultiResult, V, MultiAggregator[V]] {
-  // TODO We need to override & to make it so that the head is never a MutliAggregator - otherwise we will end up
-  // with an unnecessary level of nesting.
+  override def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] = this match {
+    case &&(head: B, tail) => &&(head, tail & b)
+  }
 }
 
 case class MultiAggregatorNil[V]() extends MultiAggregator[V] {
   def update(e: V): Unit = ()
   def update(a: MultiAggregator[V]): Unit = ()
   def result: MultiResult = MultiResultNil
+  override def &[B <: Aggregator[_, V, B]](b: B): MultiAggregator[V] = &&(b, this)
 }
 
 final case class &&[V, H <: Aggregator[_, V, H], T <: MultiAggregator[V]](head: H, tail: T) extends MultiAggregator[V] {
@@ -64,8 +68,18 @@ final case class &&[V, H <: Aggregator[_, V, H], T <: MultiAggregator[V]](head: 
 }
 
 object Aggregator {
-  implicit class PimpedRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
+  implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggByKey[R, A <: Aggregator[R, V, A]](createAggregator: V => A): RDD[(K, A)] =
       rdd.combineByKey(createAggregator, _ + _, _ + _)
+
+    def aggByKeyResult[R, A <: Aggregator[R, V, A] : ClassTag](createAggregator: V => A): RDD[(K, R)] =
+      aggByKey[R, A](createAggregator).mapValues(_.result)
+  }
+
+  implicit class PimpedRDD[T: ClassTag](rdd: RDD[T]) {
+    def agg[R, A <: Aggregator[R, T, A] : ClassTag](createAggregator: T => A): A = rdd.map(createAggregator).reduce(_ + _)
+
+    def aggResult[R, A <: Aggregator[R, T, A] : ClassTag](createAggregator: T => A): R =
+      rdd.map(createAggregator).reduce(_ + _).result
   }
 }
