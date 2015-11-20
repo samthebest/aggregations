@@ -79,82 +79,29 @@ object Aggregator {
   // Only way I can think to make it type safe is copy and pasting to make many
   // This will ultimately mean we have to use a number to indicate the size of the HList :(
 
-  def aggsToResults1[R1, S1](agg: Aggregator[S1, _, R1], state: S1): R1 = agg.result(state)
+  // Will have to learn how to do macros to make this worth it. Actually, macros look too complicated, just generate strings
 
-  import poly._
-
-  object getResult extends Poly2 {
-    def apply[S, R](aggAndState: (Aggregator[S, _, R], S)) = aggAndState._1.result(aggAndState._2)
+  def aggsToResultsGenerator(num: Int): String = {
+    (1 to num).map(i => {
+      val typeParms = (1 to i).map(j => s"R$j, S$j").mkString(", ")
+      val aggType = (1 to i).map(j => s"Aggregator[S$j, _, R$j]").mkString(" :: ")
+      val statesType = (1 to i).map(j => s"S$j").mkString(" :: ")
+      val returnType = (1 to i).map(j => s"R$j").mkString(" :: ")
+      s"def aggsToResults$i[$typeParms](agg: $aggType :: HNil, states: $statesType :: HNil): $returnType :: HNil = " +
+        s"agg.head.result(states.head) :: aggsToResults${i - 1}(agg.tail, states.tail)"
+    }).mkString("\n")
   }
 
-  object toString extends Poly0 {
-    def apply[T](s: T)
-  }
+  // Doesn't seem like I'm getting much benefit to using HLists here, only nice feature is that we can concatenate HLists
+  // i.e. we don't have to go to the faff of flattening the tuples
 
+  def aggsToResults0[R1, S1](agg: HNil, state: HNil): HNil = HNil
 
-//  object getResult extends Poly2 {
-//    def apply[S, R](agg: Aggregator[S, _, R], state: S) = agg.result(state)
-//  }
-
-//  object addSize extends Poly2 {
-//    implicit  def default[T](implicit st: size.Case.Aux[T, Int]) =
-//      at[Int, T]{ (acc, t) => acc+size(t) }
-//  }
-
-  def aggsToResults2[R1, R2, S1, S2](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: HNil, state: S1 :: S2 :: HNil): R1 :: R2 :: HNil = {
-    // Should be able to use higher kinded polymorphism here
-
-//    def poly[S, R](agg: Aggregator[S, _, R], state: S) = agg.result(state)
-//
-//    val f: ((Aggregator[Nothing, _, Nothing], Nothing)) => Nothing = (poly _).tupled
-
-//    val someInts = 1 :: 2 :: "hello" :: HNil
-//    val someMore = 1 :: 2 :: "hello" :: HNil
-//
-//
-//    def toString[T](t: T) = t.toString
-//
-//    someInts.map(x => toString(x))
-
-//    someInts.zip(someMore).map(getResult)
-
-    agg.zip(state) map getResult
-//    .map {
-//      case (agg, state) => poly(agg, state)
-//    }
-
-    ???
-  }
-
-  def aggsToResults[Aggs <: HList, Results <: HList](aggs: Aggs): Results = {
-    ???
-  }
-
-  // We could get it to work before because we had hidden the type of the state under F-bounded polymorphism
-
-//  def updateStateLists[V, State, A <: Aggregator[State, V, _] :: HList, SL <: State :: HList](aggregators: A)(sList: SL)(e: V): SL = {
-//    sList match {
-//      case state :: HNil => sList
-//      case state :: hlist => aggregators.head.mutate(state, e) :: updateStateLists(aggregators.tail)(sList.tail)(e)
-//    }
-//  }
-
-//  def updateStateLists[V](aggregators: Seq[Aggregator[_, V, _]])(sList: HList)(e: V): HList = {
-//    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
-//
-//
-//
-//
-//    val f = (polymorphicMutate _).tupled
-//
-//    val x: List[Any] = sList.toList
-//
-//    toHList(aggregators.zip(x)).map(f)
-//
-////    val aggs: HList = toHList(aggregators)
-////
-////    sList.zip(aggs).map(f)
-//  }
+  def aggsToResults1[R1, S1](agg: Aggregator[S1, _, R1] :: HNil, states: S1 :: HNil): R1 :: HNil = agg.head.result(states.head) :: aggsToResults0(agg.tail, states.tail)
+  def aggsToResults2[R1, S1, R2, S2](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: HNil, states: S1 :: S2 :: HNil): R1 :: R2 :: HNil = agg.head.result(states.head) :: aggsToResults1(agg.tail, states.tail)
+  def aggsToResults3[R1, S1, R2, S2, R3, S3](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: HNil, states: S1 :: S2 :: S3 :: HNil): R1 :: R2 :: R3 :: HNil = agg.head.result(states.head) :: aggsToResults2(agg.tail, states.tail)
+  def aggsToResults4[R1, S1, R2, S2, R3, S3, R4, S4](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: HNil, states: S1 :: S2 :: S3 :: S4 :: HNil): R1 :: R2 :: R3 :: R4 :: HNil = agg.head.result(states.head) :: aggsToResults3(agg.tail, states.tail)
+  def aggsToResults5[R1, S1, R2, S2, R3, S3, R4, S4, R5, S5](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: Aggregator[S5, _, R5] :: HNil, states: S1 :: S2 :: S3 :: S4 :: S5 :: HNil): R1 :: R2 :: R3 :: R4 :: R5 :: HNil = agg.head.result(states.head) :: aggsToResults4(agg.tail, states.tail)
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggsByKey(aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
