@@ -39,6 +39,23 @@ object Aggregator {
 
   // We loose type safety, maybe would be nice to recover the MultiAggregator type
   def toHList[T](l: Seq[T]): HList = if (l.isEmpty) HNil else l.head :: toHList(l.tail)
+//
+//  def updateStateLists[V, State](aggregators: HList)(sList: HList)(e: V): HList = {
+//    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
+//
+//    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
+//
+//    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
+//
+//    sList match {
+//      case state :: HNil => sList
+//      case state :: otherStates => aggregators match {
+//        case aggregator :: otherAggregators =>
+//          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
+//      }
+//
+//    }
+//  }
 
   def addStateLists(l: HList, r: HList) = ???
 
@@ -57,6 +74,60 @@ object Aggregator {
       }
 
     }
+  }
+
+  // Only way I can think to make it type safe is copy and pasting to make many
+  // This will ultimately mean we have to use a number to indicate the size of the HList :(
+
+  def aggsToResults1[R1, S1](agg: Aggregator[S1, _, R1], state: S1): R1 = agg.result(state)
+
+  import poly._
+
+  object getResult extends Poly2 {
+    def apply[S, R](aggAndState: (Aggregator[S, _, R], S)) = aggAndState._1.result(aggAndState._2)
+  }
+
+  object toString extends Poly0 {
+    def apply[T](s: T)
+  }
+
+
+//  object getResult extends Poly2 {
+//    def apply[S, R](agg: Aggregator[S, _, R], state: S) = agg.result(state)
+//  }
+
+//  object addSize extends Poly2 {
+//    implicit  def default[T](implicit st: size.Case.Aux[T, Int]) =
+//      at[Int, T]{ (acc, t) => acc+size(t) }
+//  }
+
+  def aggsToResults2[R1, R2, S1, S2](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: HNil, state: S1 :: S2 :: HNil): R1 :: R2 :: HNil = {
+    // Should be able to use higher kinded polymorphism here
+
+//    def poly[S, R](agg: Aggregator[S, _, R], state: S) = agg.result(state)
+//
+//    val f: ((Aggregator[Nothing, _, Nothing], Nothing)) => Nothing = (poly _).tupled
+
+//    val someInts = 1 :: 2 :: "hello" :: HNil
+//    val someMore = 1 :: 2 :: "hello" :: HNil
+//
+//
+//    def toString[T](t: T) = t.toString
+//
+//    someInts.map(x => toString(x))
+
+//    someInts.zip(someMore).map(getResult)
+
+    agg.zip(state) map getResult
+//    .map {
+//      case (agg, state) => poly(agg, state)
+//    }
+
+    ???
+  }
+
+  def aggsToResults[Aggs <: HList, Results <: HList](aggs: Aggs): Results = {
+    ???
   }
 
   // We could get it to work before because we had hidden the type of the state under F-bounded polymorphism
@@ -94,7 +165,14 @@ object Aggregator {
       val combineStates: (HList, HList) => HList = ???
       rdd.combineByKey(create, updateStates, combineStates)
     }
-
+//    def aggsByKey2[Aggs](aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
+//      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
+//
+//      val create: V => HList = ???
+//      val updateStates: (HList, V) => HList = ???
+//      val combineStates: (HList, HList) => HList = ???
+//      rdd.combineByKey(create, updateStates, combineStates)
+//    }
 
     //    def aggByKeyResult[R, A <: AggregatorOps[R, V, A] : ClassTag](createAggregator: V => A): RDD[(K, R)] =
     //      aggByKey[R, A](createAggregator).mapValues(_.result)
