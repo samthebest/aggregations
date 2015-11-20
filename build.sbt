@@ -16,7 +16,9 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze" % "0.11.2" withSources() withJavadoc(),
   "org.scalanlp" %% "breeze-natives" % "0.11.2" withSources() withJavadoc(),
   "org.rogach" %% "scallop" % "0.9.5" withSources() withJavadoc(),
-//  "org.scalaz" %% "scalaz-core" % "7.1.4" withSources() withJavadoc(),
+  "org.scalaz" %% "scalaz-core" % "7.1.4" withSources() withJavadoc(),
+  "com.chuusai" %% "shapeless" % "2.2.5",
+  compilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full),
   // For some reason omitting spark-sql causes crazy exceptions ... *tut* *tut* typical
   ("org.apache.spark" % "spark-sql_2.10" % "1.3.0-cdh5.4.2") withSources() withJavadoc(),
   ("org.apache.spark" % "spark-core_2.10" % "1.3.0-cdh5.4.2") withSources() withJavadoc(),
