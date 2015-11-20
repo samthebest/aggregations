@@ -52,10 +52,10 @@ object FromDummyDataReport {
   )
 }
 
-import Aggregator._
+import AggregatorOps._
 
 object ErrorEstimator {
-  def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
+  def fromTestData[T: ClassTag, M <: AggregatorOps[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
                                                                              medianFac: Long => M,
                                                                              memoryCap: Int = 1000): FromTestDataReport = {
     val estimates: RDD[(T, Double)] = testData.aggByKey[Double, M](medianFac).mapValues(_.result)
@@ -94,7 +94,7 @@ object ErrorEstimator {
     exactMedian.result
   }
 
-  def relativeError[M <: Aggregator[Double, Long, M]](numbers: Seq[Long], median: M): Double = {
+  def relativeError[M <: AggregatorOps[Double, Long, M]](numbers: Seq[Long], median: M): Double = {
     numbers.foreach(median.update)
     relativeError(median.result, correctMedian(numbers))
   }

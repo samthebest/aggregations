@@ -9,7 +9,7 @@ import CappedBinHistogram._
 case class CappedBinHistogram(sizeLimit: Int,
                               mergeStrategy: MergeStrategy = defaultMergeStrategy,
                               private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
-  extends Aggregator[Map[(Long, Long), Long], Long, CappedBinHistogram] {
+  extends AggregatorOps[Map[(Long, Long), Long], Long, CappedBinHistogram] {
 
   def size: Int = m.size
 

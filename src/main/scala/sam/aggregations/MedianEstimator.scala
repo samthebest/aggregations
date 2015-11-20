@@ -109,7 +109,7 @@ object MedianEstimator {
 import MedianEstimator._
 
 case class MedianEstimator(sizeLimit: Int)
-  extends Aggregator[Double, Long, MedianEstimator] {
+  extends AggregatorOps[Double, Long, MedianEstimator] {
   private[MedianEstimator] val hist: CappedBinHistogram = new CappedBinHistogram(sizeLimit)
 
   def size: Int = hist.size

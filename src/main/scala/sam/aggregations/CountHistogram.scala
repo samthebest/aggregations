@@ -3,7 +3,7 @@ package sam.aggregations
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-case class CountHistogram[T: ClassTag]() extends Aggregator[Map[T, Long], T, CountHistogram[T]] {
+case class CountHistogram[T: ClassTag]() extends AggregatorOps[Map[T, Long], T, CountHistogram[T]] {
   private val m: mutable.Map[T, Long] = mutable.Map.empty
 
   def update(e: T): Unit = m.update(e, m.getOrElse(e, 0L) + 1)

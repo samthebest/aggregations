@@ -14,7 +14,7 @@ import StaticSparkContext._, MedianSpecUtils._
 class ErrorEstimatorSpecs extends Specification with Serializable {
   sequential
 
-  case class MockMedian(fixedResult: Double) extends Aggregator[Double, Long, MockMedian] {
+  case class MockMedian(fixedResult: Double) extends AggregatorOps[Double, Long, MockMedian] {
     def result: Double = fixedResult
     def update(e: Long): Unit = ()
     def update(m: MockMedian): Unit = ()

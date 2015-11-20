@@ -1,6 +1,6 @@
 package sam.aggregations
 
-class ExactMedian() extends Aggregator[Double, Long, ExactMedian] {
+class ExactMedian() extends AggregatorOps[Double, Long, ExactMedian] {
   private var elems: List[Long] = Nil
   def getElems: List[Long] = elems
   def result: Double = elems match {
