@@ -3,7 +3,12 @@ package sam.aggregations
 import breeze.storage.Zero
 import org.apache.spark.{AccumulatorParam, Accumulator}
 import org.apache.spark.rdd.RDD
-import shapeless.{HNil, HList, ::}
+import shapeless._
+import HList._
+import shapeless.ops.hlist._
+//import syntax.std.tuple._
+//import Zipper._
+//import shapeless.ops.traversable.FromTraversable._
 
 import scala.reflect.ClassTag
 import scalaz.{Semigroup, Monoid}
@@ -12,26 +17,79 @@ import scalaz.{Semigroup, Monoid}
 // Then we can supply case objects, furthermore user need not worry about the complex type params
 // Finally, can then just HLists for the state and result (getting toTuple for free and stuff)
 
-trait Aggregator[S, V, R] extends Semigroup[S] {
+trait Aggregator[S, V, +R] extends Semigroup[S] {
   def mutate(state: S, e: V): S
-  def mutate(state: S, e: S): S
+  def mutateAdd(state: S, e: S): S
   def result(state: S): R
   def zero: S
-  
-  def append(f1: S, f2: => S): S = mutate(f1, f2)
+
+  def append(f1: S, f2: => S): S = mutateAdd(f1, f2)
+
+//  type AggOps = T forSome { type T <: AggregatorOps[R, V, T] }
+
+//  def mkAggOps = new AggregatorOps[R, V, AggOps] {
+//    var s: S = zero
+//    def update(e: V): Unit = s = mutate(s, e)
+//    def update(a: AggOps): Unit = s = mutate(s, a.s)
+//    def r: R = result(s)
+//  }
 }
 
 object Aggregator {
 
+  // We loose type safety, maybe would be nice to recover the MultiAggregator type
+  def toHList[T](l: Seq[T]): HList = if (l.isEmpty) HNil else l.head :: toHList(l.tail)
+
   def addStateLists(l: HList, r: HList) = ???
 
-  def updateStateLists[V](sList: HList)(e: V) = ???
+  def updateStateLists[V, State, A <: HList, SL <: HList](aggregators: A)(sList: SL)(e: V): HList = {
+    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
+
+    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
+
+    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
+
+    sList match {
+      case state :: HNil => sList
+      case state :: otherStates => aggregators match {
+        case aggregator :: otherAggregators =>
+          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
+      }
+
+    }
+  }
+
+  // We could get it to work before because we had hidden the type of the state under F-bounded polymorphism
+
+//  def updateStateLists[V, State, A <: Aggregator[State, V, _] :: HList, SL <: State :: HList](aggregators: A)(sList: SL)(e: V): SL = {
+//    sList match {
+//      case state :: HNil => sList
+//      case state :: hlist => aggregators.head.mutate(state, e) :: updateStateLists(aggregators.tail)(sList.tail)(e)
+//    }
+//  }
+
+//  def updateStateLists[V](aggregators: Seq[Aggregator[_, V, _]])(sList: HList)(e: V): HList = {
+//    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
+//
+//
+//
+//
+//    val f = (polymorphicMutate _).tupled
+//
+//    val x: List[Any] = sList.toList
+//
+//    toHList(aggregators.zip(x)).map(f)
+//
+////    val aggs: HList = toHList(aggregators)
+////
+////    sList.zip(aggs).map(f)
+//  }
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggsByKey(aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
-      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _).reverse
+      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
 
-      val create: V => HList = updateStateLists[V](zeroList)
+      val create: V => HList = ???
       val updateStates: (HList, V) => HList = ???
       val combineStates: (HList, HList) => HList = ???
       rdd.combineByKey(create, updateStates, combineStates)
@@ -54,7 +112,7 @@ object Aggregator {
 //
 //  def update(e: V): Unit
 //  def update(a: A): Unit
-//  def result: R
+//  def r: R
 //
 //  def +(e: V): A = {
 //    this.update(e)
@@ -68,10 +126,10 @@ object Aggregator {
 //
 //  def update(e: V*): Unit = Seq(e: _*).foreach(update)
 //
-//  def &[B <: AggregatorOps[_, V, B]](b: B): MultiAggregatorOps[V] = b match {
-//    case ma: MultiAggregatorOps[V] => &&[V, A, MultiAggregatorOps[V]](this, ma)
-//    case _ => &&[V, A, MultiAggregatorOps[V]](this, &&[V, B, MultiAggregatorOps[V]](b, MultiAggregatorOpsNil[V]()))
-//  }
+////  def &[B <: AggregatorOps[_, V, B]](b: B): MultiAggregatorOps[V] = b match {
+////    case ma: MultiAggregatorOps[V] => &&[V, A, MultiAggregatorOps[V]](this, ma)
+////    case _ => &&[V, A, MultiAggregatorOps[V]](this, &&[V, B, MultiAggregatorOps[V]](b, MultiAggregatorOpsNil[V]()))
+////  }
 //}
 
 // TODO Properties for unit testing / CDD, e.g. the noArgs constructor
