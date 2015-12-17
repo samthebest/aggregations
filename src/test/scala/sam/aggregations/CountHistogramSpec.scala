@@ -2,7 +2,7 @@ package sam.aggregations
 
 import org.specs2.mutable.Specification
 
-class ExactHistogramSpec extends Specification {
+class CountHistogramSpec extends Specification {
   sequential
 
   "ExactHistogram" should {
