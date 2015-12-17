@@ -143,9 +143,7 @@ object Aggregator {
       val zeros: S1 :: HNil = zeros1(aggregator)
 
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
-      val create: V => S1 :: HNil = updateStates(zeros, _)
-      val combineStates: (S1 :: HNil, S1 :: HNil) => S1 :: HNil = merge1(aggregator, _, _)
-      (rdd.combineByKey(create, updateStates, combineStates): RDD[(K, S1 :: HNil)])
+      (rdd.combineByKey(updateStates(zeros, _), updateStates, merge1(aggregator, _, _)): RDD[(K, S1 :: HNil)])
       .mapValues(y => aggsToResults1(aggregator, y))
     }
 
