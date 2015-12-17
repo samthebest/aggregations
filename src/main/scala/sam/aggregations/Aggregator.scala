@@ -17,6 +17,14 @@ import scalaz.{Semigroup, Monoid}
 // Then we can supply case objects, furthermore user need not worry about the complex type params
 // Finally, can then just HLists for the state and result (getting toTuple for free and stuff)
 
+// S must be mutable.  If it had custom serialization, we could then have custom serialization for HLists
+
+// Need to redesign this so user only defines
+// def mutate(state, e): Unit
+// def mutateAdd(state, state): Unit
+
+// To make it clear that user must mutate state
+
 trait Aggregator[S, V, +R] extends Semigroup[S] {
   def mutate(state: S, e: V): S
   def mutateAdd(state: S, e: S): S
@@ -25,81 +33,18 @@ trait Aggregator[S, V, +R] extends Semigroup[S] {
 
   def append(f1: S, f2: => S): S = mutateAdd(f1, f2)
 
-//  type AggOps = T forSome { type T <: AggregatorOps[R, V, T] }
+  //  type AggOps = T forSome { type T <: AggregatorOps[R, V, T] }
 
-//  def mkAggOps = new AggregatorOps[R, V, AggOps] {
-//    var s: S = zero
-//    def update(e: V): Unit = s = mutate(s, e)
-//    def update(a: AggOps): Unit = s = mutate(s, a.s)
-//    def r: R = result(s)
-//  }
+  //  def mkAggOps = new AggregatorOps[R, V, AggOps] {
+  //    var s: S = zero
+  //    def update(e: V): Unit = s = mutate(s, e)
+  //    def update(a: AggOps): Unit = s = mutate(s, a.s)
+  //    def r: R = result(s)
+  //  }
 }
 
 object Aggregator {
-
-  // We loose type safety, maybe would be nice to recover the MultiAggregator type
-  def toHList[T](l: Seq[T]): HList = if (l.isEmpty) HNil else l.head :: toHList(l.tail)
-//
-//  def updateStateLists[V, State](aggregators: HList)(sList: HList)(e: V): HList = {
-//    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
-//
-//    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
-//
-//    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
-//
-//    sList match {
-//      case state :: HNil => sList
-//      case state :: otherStates => aggregators match {
-//        case aggregator :: otherAggregators =>
-//          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
-//      }
-//
-//    }
-//  }
-
-  def addStateLists(l: HList, r: HList) = ???
-
-  def updateStateLists[V, State, A <: HList, SL <: HList](aggregators: A)(sList: SL)(e: V): HList = {
-    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
-
-    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
-
-    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
-
-    sList match {
-      case state :: HNil => sList
-      case state :: otherStates => aggregators match {
-        case aggregator :: otherAggregators =>
-          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
-      }
-
-    }
-  }
-
-  // TODO updateStates, which should modify states in place.
-
-
-  // Only way I can think to make it type safe is copy and pasting to make many
-  // This will ultimately mean we have to use a number to indicate the size of the HList :(
-
-  // Will have to learn how to do macros to make this worth it. Actually, macros look too complicated, just generate strings
-
-  // TODO Get a PHd in Scala Macros so I can work out how to do really simple stuff like this using macros
-  def aggsToResultsGenerator(num: Int): String = {
-    (1 to num).map(i => {
-      val typeParms = (1 to i).map(j => s"R$j, S$j").mkString(", ")
-      val aggType = (1 to i).map(j => s"Aggregator[S$j, _, R$j]").mkString(" :: ")
-      val statesType = (1 to i).map(j => s"S$j").mkString(" :: ")
-      val returnType = (1 to i).map(j => s"R$j").mkString(" :: ")
-      s"def aggsToResults$i[$typeParms](agg: $aggType :: HNil, states: $statesType :: HNil): $returnType :: HNil = " +
-        s"agg.head.result(states.head) :: aggsToResults${i - 1}(agg.tail, states.tail)"
-    }).mkString("\n")
-  }
-
-  // Doesn't seem like I'm getting much benefit to using HLists here, only nice feature is that we can concatenate HLists
-  // i.e. we don't have to go to the faff of flattening the tuples
-
-  def aggsToResults0[R1, S1](agg: HNil, state: HNil): HNil = HNil
+  def aggsToResults0(agg: HNil, state: HNil): HNil = HNil
 
   def aggsToResults1[R1, S1](agg: Aggregator[S1, _, R1] :: HNil, states: S1 :: HNil): R1 :: HNil = agg.head.result(states.head) :: aggsToResults0(agg.tail, states.tail)
   def aggsToResults2[R1, S1, R2, S2](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: HNil, states: S1 :: S2 :: HNil): R1 :: R2 :: HNil = agg.head.result(states.head) :: aggsToResults1(agg.tail, states.tail)
@@ -107,26 +52,123 @@ object Aggregator {
   def aggsToResults4[R1, S1, R2, S2, R3, S3, R4, S4](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: HNil, states: S1 :: S2 :: S3 :: S4 :: HNil): R1 :: R2 :: R3 :: R4 :: HNil = agg.head.result(states.head) :: aggsToResults3(agg.tail, states.tail)
   def aggsToResults5[R1, S1, R2, S2, R3, S3, R4, S4, R5, S5](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: Aggregator[S5, _, R5] :: HNil, states: S1 :: S2 :: S3 :: S4 :: S5 :: HNil): R1 :: R2 :: R3 :: R4 :: R5 :: HNil = agg.head.result(states.head) :: aggsToResults4(agg.tail, states.tail)
 
+  object zeroGetter extends Poly1 {
+    implicit def caseZero[S1] = at[Aggregator[S1, _, _]](_.zero)
+  }
+
+
+  def zeros0(agg: HNil): HNil = HNil
+
+  def zeros1[S1](agg: Aggregator[S1, _, _] :: HNil): S1 :: HNil = agg.head.zero :: zeros0(agg.tail)
+  def zeros2[S1, S2](agg: Aggregator[S1, _, _] :: Aggregator[S2, _, _] :: HNil): S1 :: S2 :: HNil = agg.head.zero :: zeros1(agg.tail)
+
+
+  def mutate0[V](agg: HNil, state: HNil, v: V): HNil = HNil
+
+  // We mutate the values in the HList rather than creating a new one
+  def mutate1[V, S1](agg: Aggregator[S1, V, _] :: HNil, state: S1 :: HNil, v: V): S1 :: HNil = {
+    agg.head.mutate(state.head, v)
+    mutate0(agg.tail, state.tail, v)
+    state
+  }
+
+  def merge0[V](agg: HNil, state: HNil, toMergeIn: HNil): HNil = HNil
+
+  // We mutate the values in the HList rather than creating a new one
+  def merge1[V, S1](agg: Aggregator[S1, V, _] :: HNil, state: S1 :: HNil, toMergeIn: S1 :: HNil): S1 :: HNil = {
+    agg.head.mutateAdd(state.head, toMergeIn.head)
+    merge0(agg.tail, state.tail, toMergeIn.tail)
+    state
+  }
+
+  //
+  //
+  //
+  //  // We loose type safety, maybe would be nice to recover the MultiAggregator type
+  //  def toHList[T](l: Seq[T]): HList = if (l.isEmpty) HNil else l.head :: toHList(l.tail)
+  ////
+  ////  def updateStateLists[V, State](aggregators: HList)(sList: HList)(e: V): HList = {
+  ////    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
+  ////
+  ////    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
+  ////
+  ////    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
+  ////
+  ////    sList match {
+  ////      case state :: HNil => sList
+  ////      case state :: otherStates => aggregators match {
+  ////        case aggregator :: otherAggregators =>
+  ////          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
+  ////      }
+  ////
+  ////    }
+  ////  }
+  //
+  //  def addStateLists(l: HList, r: HList) = ???
+  //
+  //  def updateStateLists[V, State, A <: HList, SL <: HList](aggregators: A)(sList: SL)(e: V): HList = {
+  //    def polymorphicMutate[S](state: S, aggregator: Aggregator[S, V, _]): S = aggregator.mutate(state, e)
+  //
+  //    def polymorphicMutateTupled[S](stateAggregator: (S, Aggregator[S, V, _])): S = polymorphicMutate(stateAggregator._1, stateAggregator._2)
+  //
+  //    type SameStateType = (S, Aggregator[S, V, _]) forSome { type S }
+  //
+  //    sList match {
+  //      case state :: HNil => sList
+  //      case state :: otherStates => aggregators match {
+  //        case aggregator :: otherAggregators =>
+  //          polymorphicMutateTupled((state, aggregator).asInstanceOf[SameStateType]) :: updateStateLists(otherAggregators)(otherStates)(e)
+  //      }
+  //
+  //    }
+  //  }
+  //
+  //  // TODO updateStates, which should modify states in place.
+  //
+  //
+  //  // Only way I can think to make it type safe is copy and pasting to make many
+  //  // This will ultimately mean we have to use a number to indicate the size of the HList :(
+  //
+  //  // Will have to learn how to do macros to make this worth it. Actually, macros look too complicated, just generate strings
+  //
+  //  // Doesn't seem like I'm getting much benefit to using HLists here, only nice feature is that we can concatenate HLists
+  //  // i.e. we don't have to go to the faff of flattening the tuples
+  //
+  //
+  //
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
-    def aggsByKey(aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
+    def aggsByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] = {
+//      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
+
+      val zeros: S1 :: HNil = zeros1(aggregator)
+
+      val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
+      val create: V => S1 :: HNil = updateStates(zeros, _)
+      val combineStates: (S1 :: HNil, S1 :: HNil) => S1 :: HNil = merge1(aggregator, _, _)
+      (rdd.combineByKey(create, updateStates, combineStates): RDD[(K, S1 :: HNil)])
+      .mapValues(y => aggsToResults1(aggregator, y))
+    }
+
+
+    def aggsByKeyOld(aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
       val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
 
-      val create: V => HList = ???
       val updateStates: (HList, V) => HList = ???
+      val create: V => HList = ???
       val combineStates: (HList, HList) => HList = ???
       rdd.combineByKey(create, updateStates, combineStates)
     }
 
     // def aggregateNByKey
 
-//    def aggsByKey2[Aggs](aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
-//      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
-//
-//      val create: V => HList = ???
-//      val updateStates: (HList, V) => HList = ???
-//      val combineStates: (HList, HList) => HList = ???
-//      rdd.combineByKey(create, updateStates, combineStates)
-//    }
+    //    def aggsByKey2[Aggs](aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
+    //      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
+    //
+    //      val create: V => HList = ???
+    //      val updateStates: (HList, V) => HList = ???
+    //      val combineStates: (HList, HList) => HList = ???
+    //      rdd.combineByKey(create, updateStates, combineStates)
+    //    }
 
     //    def aggByKeyResult[R, A <: AggregatorOps[R, V, A] : ClassTag](createAggregator: V => A): RDD[(K, R)] =
     //      aggByKey[R, A](createAggregator).mapValues(_.result)
