@@ -25,7 +25,7 @@ import scalaz.{Semigroup, Monoid}
 
 // To make it clear that user must mutate state
 
-trait Aggregator[S, V, +R] extends Semigroup[S] {
+trait Aggregator[S, V, +R] extends Serializable {//with Semigroup[S] {
   def mutate(state: S, e: V): S
   def mutateAdd(state: S, e: S): S
   def result(state: S): R
@@ -51,11 +51,6 @@ object Aggregator {
   def aggsToResults3[R1, S1, R2, S2, R3, S3](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: HNil, states: S1 :: S2 :: S3 :: HNil): R1 :: R2 :: R3 :: HNil = agg.head.result(states.head) :: aggsToResults2(agg.tail, states.tail)
   def aggsToResults4[R1, S1, R2, S2, R3, S3, R4, S4](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: HNil, states: S1 :: S2 :: S3 :: S4 :: HNil): R1 :: R2 :: R3 :: R4 :: HNil = agg.head.result(states.head) :: aggsToResults3(agg.tail, states.tail)
   def aggsToResults5[R1, S1, R2, S2, R3, S3, R4, S4, R5, S5](agg: Aggregator[S1, _, R1] :: Aggregator[S2, _, R2] :: Aggregator[S3, _, R3] :: Aggregator[S4, _, R4] :: Aggregator[S5, _, R5] :: HNil, states: S1 :: S2 :: S3 :: S4 :: S5 :: HNil): R1 :: R2 :: R3 :: R4 :: R5 :: HNil = agg.head.result(states.head) :: aggsToResults4(agg.tail, states.tail)
-
-  object zeroGetter extends Poly1 {
-    implicit def caseZero[S1] = at[Aggregator[S1, _, _]](_.zero)
-  }
-
 
   def zeros0(agg: HNil): HNil = HNil
 
@@ -138,12 +133,8 @@ object Aggregator {
   //
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggsByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] = {
-//      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
-
-      val zeros: S1 :: HNil = zeros1(aggregator)
-
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
-      (rdd.combineByKey(updateStates(zeros, _), updateStates, merge1(aggregator, _, _)): RDD[(K, S1 :: HNil)])
+      (rdd.combineByKey(updateStates(zeros1(aggregator), _), updateStates, merge1(aggregator, _, _)): RDD[(K, S1 :: HNil)])
       .mapValues(y => aggsToResults1(aggregator, y))
     }
 
