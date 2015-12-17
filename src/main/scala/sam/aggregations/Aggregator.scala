@@ -25,7 +25,7 @@ object Aggregator {
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] = {
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
       (rdd.combineByKey(updateStates(zeros1(aggregator), _), updateStates, merge1(aggregator, _, _)): RDD[(K, S1 :: HNil)])
-      .mapValues(y => aggsToResults1(aggregator, y))
+      .mapValues(aggsToResults1(aggregator, _))
     }
   }
 
