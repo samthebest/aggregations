@@ -74,6 +74,15 @@ object Aggregator {
 
     def aggByKeyResult[R, A <: Aggregator[R, V, A] : ClassTag](createAggregator: V => A): RDD[(K, R)] =
       aggByKey[R, A](createAggregator).mapValues(_.result)
+
+    def aggByKeyUp[R, A <: Aggregator[R, V, A], K2](createAggregator: V => A,
+                                                    keyToCoveringKeys: K => List[K2]): RDD[(K2, A)] = {
+        (rdd.combineByKey(createAggregator, _ + _, _ + _): RDD[(K, A)])
+        .flatMap(ka => keyToCoveringKeys(ka._1).map((_, ka._2)))
+        .reduceByKey(_ + _)
+    }
+
+    // Can have a simple foldLeft over the above in order to do arbitrary levels!
   }
 
   implicit class PimpedRDD[T: ClassTag](rdd: RDD[T]) {
