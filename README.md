@@ -4,6 +4,8 @@ Fast accurate low memory type-safe aggregations DSL for Spark
 
 The intention is to add many aggregations over time.  This code was motivated by an MVP which required a way to approximate a median in a single pass and without doing a full sort.  So at the moment we just have a median estimator and it's underlying structure, a capped size bin histogram.
 
+We will probably redesign the DSL before we implement all your favourite aggregations to use HLists from shapeless.
+
 ## MedianEstimator
 
 The current implementation allows for the potential to try many different strategies for merging bins in the underlying `CappedBinHistogram` to see which performs best.  The current merge strategy is quite simple and works for the aforementioned MVP. The use case was that we have many keys and we want to compute the median of the values for each key in a map-reduce job via sparks `combineByKey`.  When the number of values is 2 - 3 orders of magnitude greater than the memory limit given to the `MedianEstimator` performance starts to become unpredictable; another merge strategy would need to be tried.
