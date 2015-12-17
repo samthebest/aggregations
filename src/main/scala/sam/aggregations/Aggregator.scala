@@ -21,6 +21,8 @@ trait Aggregator[S, V, +R] extends Serializable {//with Semigroup[S] {
 }
 
 object Aggregator {
+  // TODO an optimizer of some sort, e.g. when we ask for CountHistogram and Count, we can combine these
+
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] = {
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
