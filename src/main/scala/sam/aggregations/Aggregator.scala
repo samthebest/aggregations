@@ -76,11 +76,15 @@ object Aggregator {
     }
   }
 
+  // TODO updateStates, which should modify states in place.
+
+
   // Only way I can think to make it type safe is copy and pasting to make many
   // This will ultimately mean we have to use a number to indicate the size of the HList :(
 
   // Will have to learn how to do macros to make this worth it. Actually, macros look too complicated, just generate strings
 
+  // TODO Get a PHd in Scala Macros so I can work out how to do really simple stuff like this using macros
   def aggsToResultsGenerator(num: Int): String = {
     (1 to num).map(i => {
       val typeParms = (1 to i).map(j => s"R$j, S$j").mkString(", ")
@@ -112,6 +116,9 @@ object Aggregator {
       val combineStates: (HList, HList) => HList = ???
       rdd.combineByKey(create, updateStates, combineStates)
     }
+
+    // def aggregateNByKey
+
 //    def aggsByKey2[Aggs](aggregators: Aggregator[_, V, _]*): RDD[(K, HList)] = {
 //      val zeroList: HList = aggregators.map(_.zero).foldRight(HNil: HList)(_ :: _) //.reverse
 //
