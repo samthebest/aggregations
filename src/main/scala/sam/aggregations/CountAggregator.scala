@@ -1,11 +1,7 @@
 package sam.aggregations
 
-class LongMutable(var l: Long) extends Serializable {
-  def copy(): LongMutable = LongMutable(l)
-}
-
-object LongMutable {
-  def apply(l: Long): LongMutable = new LongMutable(l)
+case class LongMutable(var l: Long) extends Serializable {
+  def copy2(): LongMutable = LongMutable(l)
 }
 
 // TODO V should just be Any then this can be a case object
