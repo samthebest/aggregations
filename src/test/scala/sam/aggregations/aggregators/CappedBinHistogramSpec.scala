@@ -1,11 +1,10 @@
-package sam.aggregations
+package sam.aggregations.aggregators
 
 import org.specs2.mutable.Specification
 import sam.aggregations.TypeAliases._
+import sam.aggregations.aggregators.CappedBinHistogram._
 
 import scala.collection.mutable
-import CappedBinHistogram._
-
 import scala.util.Try
 
 class CappedBinHistogramSpec extends Specification {

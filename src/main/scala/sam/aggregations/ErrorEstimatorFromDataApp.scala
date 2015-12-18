@@ -2,6 +2,7 @@ package sam.aggregations
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
+import sam.aggregations.aggregators.MedianEstimator
 
 import scala.collection
 import scala.util.Random

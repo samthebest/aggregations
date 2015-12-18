@@ -1,9 +1,9 @@
-package sam.aggregations
+package sam.aggregations.aggregators
 
-import sam.aggregations.MedianEstimator._
+import sam.aggregations.MedianSpecUtils
+import sam.aggregations.aggregators.MedianEstimator._
 
 import scala.collection.mutable
-import scala.util.Try
 
 class MedianEstimatorSpec extends MedianSpecUtils {
   def toLongMap(m: mutable.Map[(Int, Int), Int]): mutable.Map[(Long, Long), Long] =

@@ -1,5 +1,7 @@
 package sam.aggregations
 
+import sam.aggregations.aggregators.CountHistogram
+
 import scala.collection.mutable
 import scala.reflect.ClassTag
 

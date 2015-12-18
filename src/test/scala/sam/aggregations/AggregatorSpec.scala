@@ -1,6 +1,7 @@
 package sam.aggregations
 
 import org.specs2.mutable.Specification
+import sam.aggregations.aggregators.{Count, LongMutable}
 import sam.aggregations.boiler_plate.AggToResultsCode._
 import sam.aggregations.boiler_plate.MergeCode._
 import sam.aggregations.boiler_plate.MutateCode._
@@ -18,19 +19,19 @@ class AggregatorSpec extends Specification with Serializable {
 
   "aggsToResults2" should {
     "Convert a state to a result" in {
-      aggsToResults2(CountAggregator :: CountAggregator :: HNil, LongMutable(6L) :: LongMutable(9L) :: HNil) must_=== 6L :: 9L :: HNil
+      aggsToResults2(Count :: Count :: HNil, LongMutable(6L) :: LongMutable(9L) :: HNil) must_=== 6L :: 9L :: HNil
     }
   }
 
   "zeros1" should {
     "Return a zero correct" in {
-      zeros1(CountAggregator :: HNil) must_=== LongMutable(0L) :: HNil
+      zeros1(Count :: HNil) must_=== LongMutable(0L) :: HNil
     }
   }
 
   "zeros2" should {
     "Return two zeros correct" in {
-      zeros2(CountAggregator :: CountAggregator :: HNil) must_=== LongMutable(0L) :: LongMutable(0L) :: HNil
+      zeros2(Count :: Count :: HNil) must_=== LongMutable(0L) :: LongMutable(0L) :: HNil
     }
   }
 
@@ -41,7 +42,7 @@ class AggregatorSpec extends Specification with Serializable {
 
     "Correctly count some strings" in {
       sc.makeRDD(Seq(1 -> "hello", 1 -> "world", 2 -> "is", 1 -> "fred", 2 -> "dude"))
-      .aggByKey1(CountAggregator :: HNil).collect().toMap must_=== Map(
+      .aggByKey1(Count :: HNil).collect().toMap must_=== Map(
         1 -> (3L :: HNil),
         2 -> (2L :: HNil)
       )
@@ -49,7 +50,7 @@ class AggregatorSpec extends Specification with Serializable {
 
     "Correctly count some strings with two aggregators" in {
       sc.makeRDD(Seq(1 -> "hello", 1 -> "world", 2 -> "is", 1 -> "fred", 2 -> "dude"))
-      .aggByKey2(CountAggregator :: CountAggregator :: HNil).collect().toMap must_=== Map(
+      .aggByKey2(Count :: Count :: HNil).collect().toMap must_=== Map(
         1 -> (3L :: 3L :: HNil),
         2 -> (2L :: 2L :: HNil)
       )
@@ -61,7 +62,7 @@ class AggregatorSpec extends Specification with Serializable {
 
     "Works when tree is trivially deep" in {
       sc.makeRDD(Seq("norwich" -> "hello", "norwich" -> "world", "london" -> "is", "norwich" -> "fred", "london" -> "dude"))
-      .aggTree1(CountAggregator :: HNil, tree = Nil)
+      .aggTree1(Count :: HNil, tree = Nil)
       .map(_.collect().toMap) must_=== List(Map(
         "norwich" -> (3L :: HNil),
         "london" -> (2L :: HNil)
@@ -72,7 +73,7 @@ class AggregatorSpec extends Specification with Serializable {
       sc.makeRDD(Seq("norwich" -> "hello", "norwich" -> "world", "london" -> "is",
         "norwich" -> "fred", "london" -> "dude"))
       .aggTree1(
-        aggregator = CountAggregator :: HNil,
+        aggregator = Count :: HNil,
         tree = List(Map("norwich" -> List("england"), "london" -> List("england")))
       )
       .map(_.collect().toMap) must_=== List(
@@ -90,7 +91,7 @@ class AggregatorSpec extends Specification with Serializable {
       sc.makeRDD(Seq("norwich" -> "hello", "norwich" -> "world", "london" -> "is",
         "norwich" -> "fred", "london" -> "dude", "paris" -> "foo"))
       .aggTree1(
-        aggregator = CountAggregator :: HNil,
+        aggregator = Count :: HNil,
         tree = List(
           Map("norwich" -> List("england"), "london" -> List("england"), "paris" -> List("france")),
           Map("england" -> List("europe"), "france" -> List("europe"))
@@ -152,7 +153,7 @@ class AggregatorSpec extends Specification with Serializable {
         MonthDemographic(500, "cardinal", 13) -> "dude"
       ))
       .aggTree1(
-        aggregator = CountAggregator :: HNil,
+        aggregator = Count :: HNil,
         tree = tree
       ).map(_.collect().toMap.mapValues(_.head)) must_=== List(
         Map(

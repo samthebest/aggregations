@@ -1,9 +1,11 @@
-package sam.aggregations
+package sam.aggregations.aggregators
+
+import sam.aggregations.Aggregator
+import sam.aggregations.TypeAliases._
+import sam.aggregations.Utils._
+import sam.aggregations.aggregators.CappedBinHistogram._
 
 import scala.collection.mutable
-import Utils._
-
-import TypeAliases._, CappedBinHistogram._
 
 object MedianEstimator {
   trait CumulatativeCount {
@@ -101,7 +103,7 @@ object MedianEstimator {
   }
 }
 
-import MedianEstimator._
+import sam.aggregations.aggregators.MedianEstimator._
 
 case class MedianEstimator(sizeLimit: Int) extends Aggregator[mutable.Map[(Long, Long), Long], Long, Double] {
   private[MedianEstimator] val hist: CappedBinHistogram = new CappedBinHistogram(sizeLimit)

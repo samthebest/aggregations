@@ -1,10 +1,10 @@
-package sam.aggregations
+package sam.aggregations.aggregators
 
-import sam.aggregations.TypeAliases.{MergeStrategy, Long2}
+import sam.aggregations.Aggregator
+import sam.aggregations.TypeAliases.{Long2, MergeStrategy}
+import sam.aggregations.aggregators.CappedBinHistogram._
 
 import scala.collection.mutable
-
-import CappedBinHistogram._
 
 case class CappedBinHistogram(sizeLimit: Int,
                               mergeStrategy: MergeStrategy = defaultMergeStrategy)
