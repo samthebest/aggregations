@@ -13,8 +13,8 @@ class MedianEstimatorSpec extends MedianSpecUtils {
 
   def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
 
-  basicMedianSpecs(() => new MedianEstimator(10), "- MedianEstimator with enough memory")
-  sufficientMemoryProperties(i => new MedianEstimator(i))
+//  basicMedianSpecs(() => new MedianEstimator(10), "- MedianEstimator with enough memory")
+//  sufficientMemoryProperties(i => new MedianEstimator(i))
 
 //  "MedianEstimator" should {
 //    "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {

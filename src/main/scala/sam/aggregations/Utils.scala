@@ -4,6 +4,17 @@ import scala.collection.immutable.IndexedSeq
 import scala.reflect.ClassTag
 
 object Utils {
+  def overlap[T : Numeric](r1: (T, T), r2: (T, T)): Boolean = {
+    val num = implicitly[Numeric[T]]
+    import num.mkOrderingOps
+
+    (r1, r2) match {
+      case ((lower1, upper1), (lower2, _)) if lower1 < lower2 => upper1 >= lower2
+      case ((lower1, _), (lower2, upper2)) if lower1 > lower2 => upper2 >= lower1
+      case _ => true
+    }
+  }
+
   /** The resulting map will tell us the numerator X of the highest fraction X/n such that X/n or more values fall
     * strictly below the value passed to the map and X is an integer. If there is no such value T such that would return
     * n - 1, then we throw an exception since the given value of n is too large to make a n-level distinction
