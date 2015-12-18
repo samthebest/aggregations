@@ -30,6 +30,9 @@ object Aggregator {
 
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
+    // TODO Public interface should be using tuples not HLists, it should be quite easy to convert between tuples and HLists
+
+
     // TODO Optional Boolean param for each step so user can say if they want to keep that level
 
     /** tree is a list of functions from finer granularity keys to lists of coarser granularity keys.

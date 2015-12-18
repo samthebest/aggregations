@@ -58,10 +58,10 @@ object FromDummyDataReport {
 import Aggregator._
 
 object ErrorEstimator {
-  def fromTestData[S, T: ClassTag, M <: Aggregator[S, Long, Double] : ClassTag](testData: RDD[(T, Long)],
-                                                                                medianFac: () => M,
+  def fromTestData[T: ClassTag, M <: Aggregator[mutable.Map[(Long, Long), Long], Long, Double] : ClassTag](testData: RDD[(T, Long)],
+                                                                                median: M,
                                                                                 memoryCap: Int = 1000): FromTestDataReport = {
-    val estimates: RDD[(T, Double)] = testData.aggByKey1(medianFac() :: HNil).mapValues(_.head)
+    val estimates: RDD[(T, Double)] = testData.aggByKey1(median :: HNil).mapValues(_.head)
 
     val correctMedianAndCounts: RDD[(T, (Double, Int))] =
       testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
