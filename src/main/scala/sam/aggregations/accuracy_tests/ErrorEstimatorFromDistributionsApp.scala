@@ -1,6 +1,5 @@
-package sam.aggregations
+package sam.aggregations.accuracy_tests
 
-import breeze.stats.distributions.{Gaussian, Rand}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 

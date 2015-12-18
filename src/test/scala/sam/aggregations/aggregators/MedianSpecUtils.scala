@@ -4,7 +4,8 @@ import org.scalacheck.{Arbitrary, Gen, Prop}
 import org.specs2.ScalaCheck
 import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
-import sam.aggregations.{Aggregator, ErrorEstimator}
+import sam.aggregations.Aggregator
+import sam.aggregations.accuracy_tests.ErrorEstimator
 
 import scala.util.{Random, Success, Try}
 

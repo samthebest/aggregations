@@ -1,13 +1,13 @@
-package sam.aggregations
+package sam.aggregations.accuracy_tests
 
-import breeze.stats.distributions.{Rand, Gaussian}
-import org.apache.spark.{HashPartitioner, SparkContext}
+import breeze.stats.distributions.{Gaussian, Rand}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{HashPartitioner, SparkContext}
+import sam.aggregations.Aggregator
+import sam.aggregations.Aggregator._
 import sam.aggregations.aggregators.{ExactMedian, MedianEstimator}
 import shapeless._
-import HList._
 
-import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.Random
@@ -55,8 +55,6 @@ object FromDummyDataReport {
     errorsAndDistinctCounts = errorsAndDistinctCounts
   )
 }
-
-import Aggregator._
 
 object ErrorEstimator {
   def fromTestData[T: ClassTag, M <: Aggregator[mutable.Map[(Long, Long), Long], Long, Double] : ClassTag](testData: RDD[(T, Long)],

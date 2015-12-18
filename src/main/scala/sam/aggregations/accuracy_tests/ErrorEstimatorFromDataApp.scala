@@ -1,10 +1,8 @@
-package sam.aggregations
+package sam.aggregations.accuracy_tests
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.{SparkConf, SparkContext}
 import sam.aggregations.aggregators.MedianEstimator
 
-import scala.collection
 import scala.util.Random
 
 // spark-submit --master yarn-client --driver-memory 10g --executor-memory 20g --executor-cores 10 --num-executors 5 \
