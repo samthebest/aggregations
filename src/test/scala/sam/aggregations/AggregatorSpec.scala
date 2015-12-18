@@ -47,13 +47,13 @@ class AggregatorSpec extends Specification with Serializable {
       )
     }
 
-//    "Correctly count some strings with two aggregators" in {
-//      sc.makeRDD(Seq(1 -> "hello", 1 -> "world", 2 -> "is", 1 -> "fred", 2 -> "dude"))
-//      .aggByKey2(CountAggregator :: CountAggregator :: HNil).collect().toMap must_=== Map(
-//        1 -> (3L :: 3L :: HNil),
-//        2 -> (2L :: 2L :: HNil)
-//      )
-//    }
+    "Correctly count some strings with two aggregators" in {
+      sc.makeRDD(Seq(1 -> "hello", 1 -> "world", 2 -> "is", 1 -> "fred", 2 -> "dude"))
+      .aggByKey2(CountAggregator :: CountAggregator :: HNil).collect().toMap must_=== Map(
+        1 -> (3L :: 3L :: HNil),
+        2 -> (2L :: 2L :: HNil)
+      )
+    }
   }
 
   "PimpedRDD.aggTree1" should {
