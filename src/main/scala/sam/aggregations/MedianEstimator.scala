@@ -103,19 +103,17 @@ object MedianEstimator {
 
 import MedianEstimator._
 
-//case class MedianEstimator(sizeLimit: Int)
-//  extends Aggregator[Double, Long, MedianEstimator] {
-//  private[MedianEstimator] val hist: CappedBinHistogram = new CappedBinHistogram(sizeLimit)
-//
-//  def size: Int = hist.size
-//
-//  def update(e: Long): Unit = hist.update(e)
-//
-//  def result: Double = {
-//    val m = hist.result
-//    if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
-//    else medianFromBuckets(m)
-//  }
-//
-//  def update(a: MedianEstimator): Unit = hist.update(a.hist)
-//}
+case class MedianEstimator(sizeLimit: Int) extends Aggregator[mutable.Map[(Long, Long), Long], Long, Double] {
+  private[MedianEstimator] val hist: CappedBinHistogram = new CappedBinHistogram(sizeLimit)
+
+  def mutate(state: mutable.Map[(Long, Long), Long], element: Long): Unit = hist.mutate(state, element)
+  def mutateAdd(stateL: mutable.Map[(Long, Long), Long], stateR: mutable.Map[(Long, Long), Long]): Unit =
+    hist.mutateAdd(stateL, stateR)
+  def result(state: mutable.Map[(Long, Long), Long]): Double = {
+    val m = hist.result(state)
+    if (m.isEmpty) throw new IllegalArgumentException("Cannot call result when no updates called")
+    else medianFromBuckets(m)
+  }
+  def copyStates(state: mutable.Map[(Long, Long), Long]): mutable.Map[(Long, Long), Long] = ???
+  def zero: mutable.Map[(Long, Long), Long] = hist.zero
+}

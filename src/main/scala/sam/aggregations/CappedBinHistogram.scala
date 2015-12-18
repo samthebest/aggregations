@@ -31,8 +31,8 @@ case class CappedBinHistogram(sizeLimit: Int,
     mergeStrategy(stateL, sizeLimit)
   }
 
-  override def copyStates(state: mutable.Map[(Long, Long), Long]): mutable.Map[(Long, Long), Long] = ???
   override def zero: mutable.Map[(Long, Long), Long] = mutable.Map.empty
+  def copyStates(state: mutable.Map[(Long, Long), Long]): mutable.Map[(Long, Long), Long] = ???
 }
 
 object CappedBinHistogram {

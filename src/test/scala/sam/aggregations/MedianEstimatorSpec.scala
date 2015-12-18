@@ -16,68 +16,50 @@ class MedianEstimatorSpec extends MedianSpecUtils {
 //  basicMedianSpecs(() => new MedianEstimator(10), "- MedianEstimator with enough memory")
 //  sufficientMemoryProperties(i => new MedianEstimator(i))
 
-//  "MedianEstimator" should {
-//    "Size should not exceed 1 when created with sizeLimit 1 and updated with 2 distinct elements" in {
-//      val median = new MedianEstimator(1)
-//      (1 to 2).map(_.toLong).foreach(median.update)
-//      median.size must beLessThanOrEqualTo(1)
-//    }
-//
-//    "Size should not exceed 2 when created with sizeLimit 2 and updated with 3 distinct elements" in {
-//      val median = new MedianEstimator(2)
-//      (1 to 3).map(_.toLong).foreach(median.update)
-//      median.size must beLessThanOrEqualTo(2)
-//    }
-//
-//    "Size should not exceed 10 when created with sizeLimit 10 and updated with 15 distinct elements" in {
-//      val median = new MedianEstimator(10)
-//      (1 to 15).map(_.toLong).foreach(median.update)
-//      median.size must beLessThanOrEqualTo(10)
-//    }
-//
-//    "Size should return 5 when created with sizeLimit 10 and updated with 5 distinct elements" in {
-//      val median = new MedianEstimator(10)
-//      (1 to 5).map(_.toLong).foreach(median.update)
-//      median.size must beLessThanOrEqualTo(10)
-//    }
-//
-//    "Can get correct answer compressing 3 points to 2" in {
-//      val median = new MedianEstimator(2)
-//      (1 to 3).map(_.toLong).foreach(median.update)
-//      median.result must_=== 2.0
-//    }
-//
-//    "Can get correct answer compressing 3 points to 2" in {
-//      val median = new MedianEstimator(2)
-//      (2 to 4).map(_.toLong).foreach(median.update)
-//      median.result must_=== 3.0
-//    }
-//
-//    "Can get correct answer compressing 4 points to 2" in {
-//      val median = new MedianEstimator(2)
-//      (1 to 4).map(_.toLong).foreach(median.update)
-//      median.result must_=== 2.5
-//    }
-//
-//    "Can get correct answer based on regression test 1" in {
-//      val median = new MedianEstimator(7)
-//      List(4l, 10l, 5l, 10l).foreach(median.update)
-//      median.result must_=== 7.5
-//    }
-//
-//    "Correctly merges two simple medians and gives correct estimation" in {
-//      val median = new MedianEstimator(3)
-//      median.update(1l, 2l, 3l, 4l)
-//
-//      val median2 = new MedianEstimator(1)
-//      median2.update(1l, 6l)
-//
-//      median.update(median2)
-//      median.update(median2)
-//
-//      median.result must_=== 3.0
-//    }
-//  }
+  "MedianEstimator" should {
+    "Can get correct answer compressing 3 points to 2" in {
+      val median = new MedianEstimator(2)
+      val state = median.zero
+      (1 to 3).map(_.toLong).foreach(median.mutate(state, _))
+      median.result(state) must_=== 2.0
+    }
+
+    "Can get correct answer compressing 3 points to 2" in {
+      val median = new MedianEstimator(2)
+      val state = median.zero
+      (2 to 4).map(_.toLong).foreach(median.mutate(state, _))
+      median.result(state) must_=== 3.0
+    }
+
+    "Can get correct answer compressing 4 points to 2" in {
+      val median = new MedianEstimator(2)
+      val state = median.zero
+      (1 to 4).map(_.toLong).foreach(median.mutate(state, _))
+      median.result(state) must_=== 2.5
+    }
+
+    "Can get correct answer based on regression test 1" in {
+      val median = new MedianEstimator(7)
+      val state = median.zero
+      List(4l, 10l, 5l, 10l).foreach(median.mutate(state, _))
+      median.result(state) must_=== 7.5
+    }
+
+    "Correctly merges two simple medians and gives correct estimation" in {
+      val median = new MedianEstimator(3)
+      val state = median.zero
+      median.mutate(state, 1l, 2l, 3l, 4l)
+
+      val median2 = new MedianEstimator(1)
+      val state2 = median.zero
+      median2.mutate(state2, 1l, 6l)
+
+      median.mutateAdd(state, state2)
+      median.mutateAdd(state, state2)
+
+      median.result(state) must_=== 3.0
+    }
+  }
 
   "medianFromBuckets" should {
     "Find the middle range with correct counts, with 1 element Map" in {
