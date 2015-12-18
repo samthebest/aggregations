@@ -18,7 +18,7 @@ object Utils {
     val total: Long = cumDensity.last._2
 
     val numeratorToFraction: List[(Int, Double)] = (0 to n - 1).reverse.map(i => (i, i.toDouble * total / n)).toList
-        
+
     (i: T) =>
       numValuesLessThanMap.toMap.get(i)
       .flatMap(numValuesLessThan =>
