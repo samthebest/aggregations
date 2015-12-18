@@ -84,18 +84,34 @@ object MorePimps {
 
       (if (tree.isEmpty) {
         List(rddKSuper.aggByKeyState1(aggregator))
+      } else if (tree.size == 1) {
+        List(
+          rddKSuper.aggByKeyState1(aggregator),
+          rddKSuper.aggByKeyState1(aggregator).flatMap {
+            case (key, state) => tree.head(key).map(_ -> state)
+          }
+          .reduceByKey(merge1(aggregator, _, _))
+        )
       } else {
         List(
           rddKSuper.aggByKeyState1(aggregator),
           rddKSuper.aggByKeyState1(aggregator).flatMap {
             case (key, state) => tree.head(key).map(_ -> state)
           }
-          .reduceByKey(merge1(aggregator, _, _)): RDD[(KSuper, S1 :: HNil)]
+          .reduceByKey(merge1(aggregator, _, _)),
+          rddKSuper.aggByKeyState1(aggregator)
+          .flatMap {
+            case (key, state) => tree.head(key).map(_ -> state)
+          }
+          .reduceByKey(merge1(aggregator, _, _))
+          .flatMap {
+            case (key, state) => tree(1)(key).map(_ -> state)
+          }
+          .reduceByKey(merge1(aggregator, _, _))
         )
       })
+
       .map(rdd => rdd.mapValues(aggsToResults1(aggregator, _)))
     }
   }
-
-
 }

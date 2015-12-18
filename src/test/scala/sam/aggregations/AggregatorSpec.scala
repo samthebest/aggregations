@@ -70,35 +70,41 @@ class AggregatorSpec extends Specification {
         tree = List(Map("norwich" -> List("england"), "london" -> List("england")))
       )
       .map(_.collect().toMap) must_=== List(
-          Map(
-            "norwich" -> (3L :: HNil),
-            "london" -> (2L :: HNil)
-          ),
+        Map(
+          "norwich" -> (3L :: HNil),
+          "london" -> (2L :: HNil)
+        ),
         Map(
           "england" -> (5L :: HNil)
         )
       )
     }
-//
-//    "Works when tree is 1 levels deep with composite keys" in {
-//      sc.makeRDD(Seq("norwich,tue" -> "hello", "norwich,tue" -> "world", "london,tue" -> "is",
-//        "norwich,thu" -> "fred", "london,thu" -> "dude"))
-//      .aggTree1(stringCounter :: HNil,
-//        tree = List(
-//          Map(
-//            "norwich,tue" -> List("england", "tue"),
-//            "norwich,thu" -> List("england", "thu")
-//          ),
-//          Map(
-//            "london,tue" -> List("england", "tue"),
-//            "london,thu" -> List("england", "thu")
-//          )
-//        ))
-//      .collect().toMap must_=== Map(
-//        "norwich" -> (3L :: HNil),
-//        "london" -> (2L :: HNil)
-//      )
-//    }
+
+    "Works when tree is 2 levels deep" in {
+      sc.makeRDD(Seq("norwich" -> "hello", "norwich" -> "world", "london" -> "is",
+        "norwich" -> "fred", "london" -> "dude", "paris" -> "foo"))
+      .aggTree1(
+        aggregator = stringCounter :: HNil,
+        tree = List(
+          Map("norwich" -> List("england"), "london" -> List("england"), "paris" -> List("france")),
+          Map("england" -> List("europe"), "france" -> List("europe"))
+        )
+      )
+      .map(_.collect().toMap) must_=== List(
+        Map(
+          "norwich" -> (3L :: HNil),
+          "london" -> (2L :: HNil),
+          "paris" -> (1L :: HNil)
+        ),
+        Map(
+          "england" -> (5L :: HNil),
+          "france" -> (1L :: HNil)
+        ),
+        Map(
+          "europe" -> (6L :: HNil)
+        )
+      )
+    }
 
     "Full interesting example using 3 step approach" in {
       trait Key
@@ -232,28 +238,28 @@ class AggregatorSpec extends Specification {
           WindowDemographicSimple(500, 14) -> 1L
 
         ),
-          Map(
-            WindowDemographicSimple(1100, 4) -> 1L,
-            WindowDemographicSimple(1100, 5) -> 1L,
-            WindowDemographicSimple(1100, 6) -> 1L,
+        Map(
+          WindowDemographicSimple(1100, 4) -> 1L,
+          WindowDemographicSimple(1100, 5) -> 1L,
+          WindowDemographicSimple(1100, 6) -> 1L,
 
-            WindowDemographicSimple(1200, 6) -> 1L,
-            WindowDemographicSimple(1200, 7) -> 1L,
-            WindowDemographicSimple(1200, 8) -> 1L,
+          WindowDemographicSimple(1200, 6) -> 1L,
+          WindowDemographicSimple(1200, 7) -> 1L,
+          WindowDemographicSimple(1200, 8) -> 1L,
 
-            WindowDemographicSimple(100, 5) -> 2L,
-            WindowDemographicSimple(100, 6) -> 3L,
-            WindowDemographicSimple(100, 7) -> 3L,
+          WindowDemographicSimple(100, 5) -> 2L,
+          WindowDemographicSimple(100, 6) -> 3L,
+          WindowDemographicSimple(100, 7) -> 3L,
 
-            WindowDemographicSimple(1200, 11) -> 1L,
-            WindowDemographicSimple(1200, 12) -> 1L,
-            WindowDemographicSimple(1200, 13) -> 1L,
+          WindowDemographicSimple(1200, 11) -> 1L,
+          WindowDemographicSimple(1200, 12) -> 1L,
+          WindowDemographicSimple(1200, 13) -> 1L,
 
-            WindowDemographicSimple(100, 8) -> 1L,
+          WindowDemographicSimple(100, 8) -> 1L,
 
-            WindowDemographicSimple(500, 12) -> 1L,
-            WindowDemographicSimple(500, 13) -> 1L,
-            WindowDemographicSimple(500, 14) -> 1L
+          WindowDemographicSimple(500, 12) -> 1L,
+          WindowDemographicSimple(500, 13) -> 1L,
+          WindowDemographicSimple(500, 14) -> 1L
 
         )
       )
