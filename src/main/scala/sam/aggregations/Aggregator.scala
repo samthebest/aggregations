@@ -36,9 +36,9 @@ object Aggregator {
       *
       * This will cause tree.length (i.e. tree depth) spark stages.  It caches each intermediate layer, the user
       * can choose to uncache the layers. */
+    // asInstanceOf due to https://issues.apache.org/jira/browse/SPARK-1296
     def aggTree1[S1, R1, KSuper >: K : ClassTag](aggregator: Aggregator[S1, V, R1] :: HNil,
                                                  tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: HNil)]] =
-    // asInstanceOf due to https://issues.apache.org/jira/browse/SPARK-1296
       tree.foldLeft(List(rdd.asInstanceOf[RDD[(KSuper, V)]].aggByKeyState1(aggregator)))((cum, branch) =>
         cum :+
           cum.last.cache().flatMap {
