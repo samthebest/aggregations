@@ -30,36 +30,40 @@ class CappedBinHistogramSpec extends Specification {
     }
   }
 
-//  "CappedBinHistogram default merge strat" should {
-//    "work with trivial merging" in {
-//      val hist = new CappedBinHistogram(1)
-//      val state = hist.zero
-//      hist.mutate(state, 1l, 2l)
-//
-//      val hist2 = new CappedBinHistogram(1)
-//      hist2.update(1l, 2l)
-//
-//      hist.update(hist2)
-//
-//      hist.result must_=== Map((1l, 2l) -> 4l)
-//    }
-//
-//    "Correctly merges identical buckets over other buckets" in {
-//      val hist = new CappedBinHistogram(3)
-//      hist.update(1l, 2l, 3l, 4l)
-//      hist.result must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
-//
-//      val hist2 = new CappedBinHistogram(1)
-//      hist2.update(1l, 6l, 6l)
-//      hist2.result must_=== Map((1l, 6l) -> 3l)
-//
-//      hist.update(hist2)
-//      hist.result must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 3l)
-//
-//      hist.update(hist2)
-//      hist.result must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 6l)
-//    }
-//  }
+  "CappedBinHistogram default merge strat" should {
+    "work with trivial merging" in {
+      val hist = new CappedBinHistogram(1)
+      val state = hist.zero
+      val state2 = hist.zero
+      hist.mutate(state, 1l, 2l)
+
+      hist.mutate(state2, 1l, 2l)
+
+      hist.mutateAdd(state, state2)
+
+      hist.result(state) must_=== Map((1l, 2l) -> 4l)
+    }
+
+    "Correctly merges identical buckets over other buckets" in {
+      val hist = new CappedBinHistogram(3)
+      val state = hist.zero
+      val state2 = hist.zero
+
+      hist.mutate(state, 1l, 2l, 3l, 4l)
+      hist.result(state) must_=== Map((1l, 2l) -> 2l, (3l, 3l) -> 1l, (4l, 4l) -> 1l)
+
+      val hist2 = new CappedBinHistogram(1)
+
+      hist2.mutate(state2, 1l, 6l, 6l)
+      hist2.result(state2) must_=== Map((1l, 6l) -> 3l)
+
+      hist.mutateAdd(state, state2)
+      hist.result(state) must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 3l)
+
+      hist.mutateAdd(state, state2)
+      hist.result(state) must_=== Map((1l, 2l) -> 2l, (3l, 4l) -> 2l, (1l, 6l) -> 6l)
+    }
+  }
 
   "merge strats" should {
 

@@ -21,6 +21,8 @@ trait Aggregator[S, -V, +R] extends Serializable {
   def result(state: S): R
   def zero: S
   def copyStates(state: S): S
+
+  def mutate(state: S, element: V*): Unit = Seq(element: _*).foreach(mutate(state, _))
 }
 
 object Aggregator {
