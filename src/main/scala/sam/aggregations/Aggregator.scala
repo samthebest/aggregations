@@ -82,36 +82,49 @@ object MorePimps {
       // RDDs are invariant in T, hence horrible asInstanceOf
       val rddKSuper: RDD[(KSuper, V)] = rdd.asInstanceOf[RDD[(KSuper, V)]]
 
-      (if (tree.isEmpty) {
-        List(rddKSuper.aggByKeyState1(aggregator))
-      } else if (tree.size == 1) {
-        List(
-          rddKSuper.aggByKeyState1(aggregator),
-          rddKSuper.aggByKeyState1(aggregator).flatMap {
-            case (key, state) => tree.head(key).map(_ -> state)
+      var treeList = List[RDD[(KSuper, S1 :: HNil)]](rddKSuper.aggByKeyState1(aggregator))
+      for (f <- tree) {
+        treeList :+=
+          treeList.last.flatMap {
+            case (key, state) => f(key).map(_ -> state)
           }
           .reduceByKey(merge1(aggregator, _, _))
-        )
-      } else {
-        List(
-          rddKSuper.aggByKeyState1(aggregator),
-          rddKSuper.aggByKeyState1(aggregator).flatMap {
-            case (key, state) => tree.head(key).map(_ -> state)
-          }
-          .reduceByKey(merge1(aggregator, _, _)),
-          rddKSuper.aggByKeyState1(aggregator)
-          .flatMap {
-            case (key, state) => tree.head(key).map(_ -> state)
-          }
-          .reduceByKey(merge1(aggregator, _, _))
-          .flatMap {
-            case (key, state) => tree(1)(key).map(_ -> state)
-          }
-          .reduceByKey(merge1(aggregator, _, _))
-        )
-      })
+      }
 
-      .map(rdd => rdd.mapValues(aggsToResults1(aggregator, _)))
+      //
+      //      (if (tree.isEmpty) {
+      //        List(rddKSuper.aggByKeyState1(aggregator))
+      //      } else if (tree.size == 1) {
+      //        List(
+      //          rddKSuper.aggByKeyState1(aggregator),
+      //
+      //          rddKSuper.aggByKeyState1(aggregator).flatMap {
+      //            case (key, state) => tree.head(key).map(_ -> state)
+      //          }
+      //          .reduceByKey(merge1(aggregator, _, _))
+      //        )
+      //      } else {
+      //        List(
+      //          rddKSuper.aggByKeyState1(aggregator),
+      //
+      //          rddKSuper.aggByKeyState1(aggregator).flatMap {
+      //            case (key, state) => tree.head(key).map(_ -> state)
+      //          }
+      //          .reduceByKey(merge1(aggregator, _, _)),
+      //
+      //          rddKSuper.aggByKeyState1(aggregator)
+      //          .flatMap {
+      //            case (key, state) => tree.head(key).map(_ -> state)
+      //          }
+      //          .reduceByKey(merge1(aggregator, _, _))
+      //          .flatMap {
+      //            case (key, state) => tree(1)(key).map(_ -> state)
+      //          }
+      //          .reduceByKey(merge1(aggregator, _, _))
+      //        )
+      //      })
+
+      treeList.map(rdd => rdd.mapValues(aggsToResults1(aggregator, _)))
     }
   }
 }

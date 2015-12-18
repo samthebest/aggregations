@@ -13,7 +13,7 @@ object StaticSparkContext {
   val sc = new SparkContext(new SparkConf().setMaster("local").setAppName("Test Spark Engine"))
 }
 
-class AggregatorSpec extends Specification {
+class AggregatorSpec extends Specification with Serializable {
   sequential
 
   val stringCounter = new CountAggregator[String]
@@ -108,7 +108,6 @@ class AggregatorSpec extends Specification {
 
     "Full interesting example using 3 step approach" in {
       trait Key
-      case class Id(id: Int) extends Key
       case class MonthDemographic(code: Int, personType: String, monthSinceEpoch: Int) extends Key
       case class WindowDemographic(code: Int, personType: String, windowCenter: Int) extends Key
       case class WindowDemographicSimple(code: Int, windowCenter: Int) extends Key
@@ -133,31 +132,20 @@ class AggregatorSpec extends Specification {
         case WindowDemographic(code, personType, window) => List(WindowDemographicSimple(code, window))
       }
 
-      val idToDemographicLookup: Map[Key, Key] = Map(
-        Id(1) -> MonthDemographic(1155, "priest", 5),
-        Id(2) -> MonthDemographic(1253, "priest", 7),
-        Id(3) -> MonthDemographic(133, "friar", 6),
-        Id(4) -> MonthDemographic(133, "friar", 6),
-        Id(5) -> MonthDemographic(1253, "friar", 12),
-        Id(6) -> MonthDemographic(133, "cardinal", 13),
-        Id(7) -> MonthDemographic(500, "cardinal", 13)
-      )
-
       val tree: List[Key => List[Key]] = List(
-        id => List(idToDemographicLookup(id)),
-        monthDemographToThreeMonthWindows _,
-        key => List(windowToCodeParent(key), removePersonType(key)),
-        removePersonTypeFromParentWindow _
+        monthDemographToThreeMonthWindows _
+        ,key => List(windowToCodeParent(key), removePersonType(key))
+//        ,removePersonTypeFromParentWindow _
       )
 
       sc.makeRDD(Seq(
-        Id(1) -> "hello",
-        Id(2) -> "world",
-        Id(3) -> "is",
-        Id(4) -> "fred",
-        Id(5) -> "dude",
-        Id(6) -> "dude",
-        Id(7) -> "dude"
+        MonthDemographic(1155, "priest", 5) -> "hello",
+        MonthDemographic(1253, "priest", 7) -> "world",
+        MonthDemographic(133, "friar", 6) -> "is",
+        MonthDemographic(133, "friar", 6) -> "fred",
+        MonthDemographic(1253, "friar", 12) -> "dude",
+        MonthDemographic(133, "cardinal", 7) -> "dude",
+        MonthDemographic(500, "cardinal", 13) -> "dude"
       ))
       .aggTree1[LongMutable, Long, Key](
         aggregator = stringCounter :: HNil,
@@ -195,8 +183,8 @@ class AggregatorSpec extends Specification {
           WindowDemographic(500, "cardinal", 12) -> 1L,
           WindowDemographic(500, "cardinal", 13) -> 1L,
           WindowDemographic(500, "cardinal", 14) -> 1L
-        ),
-        Map(
+        )
+        ,Map(
           WindowDemographic(1100, "priest", 4) -> 1L,
           WindowDemographicSimple(1155, 4) -> 1L,
           WindowDemographic(1100, "priest", 5) -> 1L,
@@ -237,31 +225,30 @@ class AggregatorSpec extends Specification {
           WindowDemographic(500, "cardinal", 14) -> 1L,
           WindowDemographicSimple(500, 14) -> 1L
 
-        ),
-        Map(
-          WindowDemographicSimple(1100, 4) -> 1L,
-          WindowDemographicSimple(1100, 5) -> 1L,
-          WindowDemographicSimple(1100, 6) -> 1L,
-
-          WindowDemographicSimple(1200, 6) -> 1L,
-          WindowDemographicSimple(1200, 7) -> 1L,
-          WindowDemographicSimple(1200, 8) -> 1L,
-
-          WindowDemographicSimple(100, 5) -> 2L,
-          WindowDemographicSimple(100, 6) -> 3L,
-          WindowDemographicSimple(100, 7) -> 3L,
-
-          WindowDemographicSimple(1200, 11) -> 1L,
-          WindowDemographicSimple(1200, 12) -> 1L,
-          WindowDemographicSimple(1200, 13) -> 1L,
-
-          WindowDemographicSimple(100, 8) -> 1L,
-
-          WindowDemographicSimple(500, 12) -> 1L,
-          WindowDemographicSimple(500, 13) -> 1L,
-          WindowDemographicSimple(500, 14) -> 1L
-
         )
+//        ,Map(
+//          WindowDemographicSimple(1100, 4) -> 1L,
+//          WindowDemographicSimple(1100, 5) -> 1L,
+//          WindowDemographicSimple(1100, 6) -> 1L,
+//
+//          WindowDemographicSimple(1200, 6) -> 1L,
+//          WindowDemographicSimple(1200, 7) -> 1L,
+//          WindowDemographicSimple(1200, 8) -> 1L,
+//
+//          WindowDemographicSimple(100, 5) -> 2L,
+//          WindowDemographicSimple(100, 6) -> 3L,
+//          WindowDemographicSimple(100, 7) -> 3L,
+//
+//          WindowDemographicSimple(1200, 11) -> 1L,
+//          WindowDemographicSimple(1200, 12) -> 1L,
+//          WindowDemographicSimple(1200, 13) -> 1L,
+//
+//          WindowDemographicSimple(100, 8) -> 1L,
+//
+//          WindowDemographicSimple(500, 12) -> 1L,
+//          WindowDemographicSimple(500, 13) -> 1L,
+//          WindowDemographicSimple(500, 14) -> 1L
+//        )
       )
 
     }
