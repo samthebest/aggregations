@@ -10,4 +10,5 @@ class CountAggregator[V] extends Aggregator[LongMutable, V, Long] {
   def mutateAdd(state: LongMutable, e: LongMutable): Unit = state.l += e.l
   def result(state: LongMutable): Long = state.l
   def zero: LongMutable = new LongMutable(0L)
+  def copyState(state: LongMutable): LongMutable = LongMutable(state.l)
 }

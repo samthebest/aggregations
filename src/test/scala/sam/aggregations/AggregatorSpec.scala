@@ -51,7 +51,7 @@ class AggregatorSpec extends Specification with Serializable {
   }
 
   "PimpedRDD.aggTree1" should {
-    import MorePimps.PimpedPairRDDWithTreeAgg
+    import Aggregator.PimpedPairRDD
 
     "Works when tree is trivially deep" in {
       sc.makeRDD(Seq("norwich" -> "hello", "norwich" -> "world", "london" -> "is", "norwich" -> "fred", "london" -> "dude"))
@@ -135,7 +135,7 @@ class AggregatorSpec extends Specification with Serializable {
       val tree: List[Key => List[Key]] = List(
         monthDemographToThreeMonthWindows _
         , key => List(windowToCodeParent(key), removePersonType(key))
-        //        ,removePersonTypeFromParentWindow _
+                ,removePersonTypeFromParentWindow _
       )
 
       sc.makeRDD(Seq(
@@ -226,29 +226,29 @@ class AggregatorSpec extends Specification with Serializable {
           WindowDemographicSimple(500, 14) -> 1L
 
         )
-        //        ,Map(
-        //          WindowDemographicSimple(1100, 4) -> 1L,
-        //          WindowDemographicSimple(1100, 5) -> 1L,
-        //          WindowDemographicSimple(1100, 6) -> 1L,
-        //
-        //          WindowDemographicSimple(1200, 6) -> 1L,
-        //          WindowDemographicSimple(1200, 7) -> 1L,
-        //          WindowDemographicSimple(1200, 8) -> 1L,
-        //
-        //          WindowDemographicSimple(100, 5) -> 2L,
-        //          WindowDemographicSimple(100, 6) -> 3L,
-        //          WindowDemographicSimple(100, 7) -> 3L,
-        //
-        //          WindowDemographicSimple(1200, 11) -> 1L,
-        //          WindowDemographicSimple(1200, 12) -> 1L,
-        //          WindowDemographicSimple(1200, 13) -> 1L,
-        //
-        //          WindowDemographicSimple(100, 8) -> 1L,
-        //
-        //          WindowDemographicSimple(500, 12) -> 1L,
-        //          WindowDemographicSimple(500, 13) -> 1L,
-        //          WindowDemographicSimple(500, 14) -> 1L
-        //        )
+                ,Map(
+                  WindowDemographicSimple(1100, 4) -> 1L,
+                  WindowDemographicSimple(1100, 5) -> 1L,
+                  WindowDemographicSimple(1100, 6) -> 1L,
+
+                  WindowDemographicSimple(1200, 6) -> 1L,
+                  WindowDemographicSimple(1200, 7) -> 1L,
+                  WindowDemographicSimple(1200, 8) -> 1L,
+
+                  WindowDemographicSimple(100, 5) -> 2L,
+                  WindowDemographicSimple(100, 6) -> 3L,
+                  WindowDemographicSimple(100, 7) -> 3L,
+
+                  WindowDemographicSimple(1200, 11) -> 1L,
+                  WindowDemographicSimple(1200, 12) -> 1L,
+                  WindowDemographicSimple(1200, 13) -> 1L,
+
+                  WindowDemographicSimple(100, 8) -> 1L,
+
+                  WindowDemographicSimple(500, 12) -> 1L,
+                  WindowDemographicSimple(500, 13) -> 1L,
+                  WindowDemographicSimple(500, 14) -> 1L
+                )
       )
 
     }
