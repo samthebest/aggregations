@@ -138,9 +138,8 @@ class MedianSpecUtils extends Specification with ScalaCheck {
         val state = median.zero
         median.mutate(state, 55L, 456L, 4L)
 
-        val median2 = memCappedFac(10)
         val state2 = median.zero
-        median2.mutate(state2, 5L, 999L, 65L)
+        median.mutate(state2, 5L, 999L, 65L)
 
         median.mutateAdd(state, state2)
 
@@ -167,17 +166,15 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
         Random.shuffle(l1 ++ l2).foreach(median.mutate(state, _))
 
-        val median1 = memCappedFac(bigMemCap)
-        val state1 = median1.zero
-        val median2 = memCappedFac(bigMemCap)
-        val state2 = median2.zero
+        val state1 = median.zero
+        val state2 = median.zero
 
-        l1.foreach(median1.mutate(state1, _))
-        l2.foreach(median2.mutate(state2, _))
+        l1.foreach(median.mutate(state1, _))
+        l2.foreach(median.mutate(state2, _))
 
-        median1.mutateAdd(state1, state2)
+        median.mutateAdd(state1, state2)
 
-        median1.result(state1) must_=== median.result(state)
+        median.result(state1) must_=== median.result(state)
       })
 
       "5 medians produce same results as a single median" ! check(
@@ -187,29 +184,24 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 
           Random.shuffle(l1 ++ l2 ++ l3 ++ l4 ++ l5).foreach(median.mutate(state, _))
 
-          val median1 = memCappedFac(bigMemCap)
-          val state1 = median1.zero
-          val median2 = memCappedFac(bigMemCap)
-          val state2 = median2.zero
-          val median3 = memCappedFac(bigMemCap)
-          val state3 = median3.zero
-          val median4 = memCappedFac(bigMemCap)
-          val state4 = median4.zero
-          val median5 = memCappedFac(bigMemCap)
-          val state5 = median5.zero
+          val state1 = median.zero
+          val state2 = median.zero
+          val state3 = median.zero
+          val state4 = median.zero
+          val state5 = median.zero
 
-          l1.foreach(median1.mutate(state1, _))
-          l2.foreach(median1.mutate(state2, _))
-          l3.foreach(median1.mutate(state3, _))
-          l4.foreach(median1.mutate(state4, _))
-          l5.foreach(median1.mutate(state5, _))
+          l1.foreach(median.mutate(state1, _))
+          l2.foreach(median.mutate(state2, _))
+          l3.foreach(median.mutate(state3, _))
+          l4.foreach(median.mutate(state4, _))
+          l5.foreach(median.mutate(state5, _))
 
-          median1.mutateAdd(state1, state2)
-          median1.mutateAdd(state1, state3)
-          median1.mutateAdd(state1, state4)
-          median1.mutateAdd(state1, state5)
+          median.mutateAdd(state1, state2)
+          median.mutateAdd(state1, state3)
+          median.mutateAdd(state1, state4)
+          median.mutateAdd(state1, state5)
 
-          median1.result(state1) must_=== median.result(state)
+          median.result(state1) must_=== median.result(state)
         })
     }
   }
@@ -231,21 +223,19 @@ class MedianSpecUtils extends Specification with ScalaCheck {
         (l1.nonEmpty && l2.nonEmpty) ==> {
           val smallCap = 10
 
-          val median1 = memCappedFac(smallCap)
-          val state1 = median1.zero
-          val median1Copy = memCappedFac(smallCap)
-          val state1Copy = median1Copy.zero
-          val median2 = memCappedFac(smallCap)
-          val state2 = median2.zero
+          val median = memCappedFac(smallCap)
+          val state1 = median.zero
+          val state1Copy = median.zero
+          val state2 = median.zero
 
-          l1.foreach(median1.mutate(state1, _))
-          l1.foreach(median1Copy.mutate(state1Copy, _))
-          l2.foreach(median2.mutate(state2, _))
+          l1.foreach(median.mutate(state1, _))
+          l1.foreach(median.mutate(state1Copy, _))
+          l2.foreach(median.mutate(state2, _))
 
-          median1.mutateAdd(state1, state2)
-          median2.mutateAdd(state2, state1Copy)
+          median.mutateAdd(state1, state2)
+          median.mutateAdd(state2, state1Copy)
 
-          median1.result(state1) must_=== median2.result(state2)
+          median.result(state1) must_=== median.result(state2)
         })
     }
 
