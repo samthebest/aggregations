@@ -10,5 +10,5 @@ case class CountHistogram[T: ClassTag]() extends Aggregator[mutable.Map[T, Long]
   }
   def result(state: mutable.Map[T, Long]): Map[T, Long] = state.toMap
   def zero: mutable.Map[T, Long] = mutable.Map.empty
-  def copyState(state: mutable.Map[T, Long]): mutable.Map[T, Long] = mutable.Map.empty ++ state
+  def copyStates(state: mutable.Map[T, Long]): mutable.Map[T, Long] = mutable.Map.empty ++ state
 }

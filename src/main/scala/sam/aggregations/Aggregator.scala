@@ -20,7 +20,7 @@ trait Aggregator[S, -V, +R] extends Serializable {
   def mutateAdd(stateL: S, stateR: S): Unit
   def result(state: S): R
   def zero: S
-  def copyState(state: S): S
+  def copyStates(state: S): S
 }
 
 object Aggregator {

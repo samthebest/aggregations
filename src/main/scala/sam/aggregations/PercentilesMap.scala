@@ -12,5 +12,5 @@ case class PercentilesMap[T: ClassTag](implicit ordering: Ordering[T]) extends A
   def zero: mutable.Map[T, Long] = hist.zero
 
   def result(state: mutable.Map[T, Long]): T => Option[Int] = Utils.percentilesMap(state.toMap)
-  def copyState(state: mutable.Map[T, Long]): mutable.Map[T, Long] = hist.copyState(state)
+  def copyStates(state: mutable.Map[T, Long]): mutable.Map[T, Long] = hist.copyStates(state)
 }

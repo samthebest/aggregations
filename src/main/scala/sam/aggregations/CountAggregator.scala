@@ -7,5 +7,5 @@ case object CountAggregator extends Aggregator[LongMutable, Any, Long] {
   def mutateAdd(state: LongMutable, e: LongMutable): Unit = state.l += e.l
   def result(state: LongMutable): Long = state.l
   def zero: LongMutable = new LongMutable(0L)
-  def copyState(state: LongMutable): LongMutable = LongMutable(state.l)
+  def copyStates(state: LongMutable): LongMutable = LongMutable(state.l)
 }

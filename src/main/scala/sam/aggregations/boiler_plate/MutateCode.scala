@@ -6,14 +6,14 @@ import shapeless.{::, HNil}
 object MutateCode {
   def apply(num: Int): String =
     (1 to num).map(i => {
-      val typeParms = (1 to i).map(j => s"V, S$j").mkString(", ")
+      val typeParms = (1 to i).map(j => s"S$j").mkString(", ")
       val aggType = (1 to i).map(j => s"Aggregator[S$j, V, _]").mkString(" :: ")
       val statesType = (1 to i).map(j => s"S$j").mkString(" :: ")
       val returnType = statesType
       val methodName = "mutate"
-      s"def $methodName$i[$typeParms](agg: $aggType :: HNil, states: $statesType :: HNil): $returnType :: HNil = {" +
+      s"def $methodName$i[V, $typeParms](agg: $aggType :: HNil, states: $statesType :: HNil, v: V): $returnType :: HNil = {\n" +
         s"  agg.head.mutate(states.head, v)\n" +
-        s"  $methodName$i(agg.tail, states.tail, v)\n" +
+        s"  $methodName${i - 1}(agg.tail, states.tail, v)\n" +
         s"  states\n" +
         s"}"
     }).mkString("\n")
