@@ -7,32 +7,32 @@ import scala.collection.mutable
 import CappedBinHistogram._
 
 case class CappedBinHistogram(sizeLimit: Int,
-                              mergeStrategy: MergeStrategy = defaultMergeStrategy,
-                              private val m: mutable.Map[(Long, Long), Long] = mutable.Map.empty)
-  extends Aggregator[Map[(Long, Long), Long], Long, CappedBinHistogram] {
+                              mergeStrategy: MergeStrategy = defaultMergeStrategy)
+  extends Aggregator[mutable.Map[(Long, Long), Long], Long, Map[(Long, Long), Long]] {
 
-  def size: Int = m.size
-
-  def update(e: Long): Unit =
-    m.find {
-      case ((lower, upper), count) => lower <= e && e <= upper
+  def mutate(state: mutable.Map[(Long, Long), Long], element: Long): Unit =
+    state.find {
+      case ((lower, upper), count) => lower <= element && element <= upper
     } match {
       case Some((key, count)) =>
-        m -= key
-        m += key -> (count + 1)
+        state -= key
+        state += key -> (count + 1)
       case None =>
-        m += ((e, e) -> 1)
-        mergeStrategy(m, sizeLimit)
+        state += ((element, element) -> 1)
+        mergeStrategy(state, sizeLimit)
     }
 
-  def result: Map[(Long, Long), Long] = m.toMap
+  def result(state: mutable.Map[(Long, Long), Long]): Map[(Long, Long), Long] = state.toMap
 
-  def update(a: CappedBinHistogram): Unit = {
-    a.result.foreach {
-      case (key, count) => m += key -> (count + m.getOrElse(key, 0l))
+  def mutateAdd(stateL: mutable.Map[(Long, Long), Long], stateR: mutable.Map[(Long, Long), Long]): Unit = {
+    stateR.foreach {
+      case (key, count) => stateL += key -> (count + stateL.getOrElse(key, 0l))
     }
-    mergeStrategy(m, sizeLimit)
+    mergeStrategy(stateL, sizeLimit)
   }
+
+  override def copyStates(state: mutable.Map[(Long, Long), Long]): mutable.Map[(Long, Long), Long] = ???
+  override def zero: mutable.Map[(Long, Long), Long] = mutable.Map.empty
 }
 
 object CappedBinHistogram {
