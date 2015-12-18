@@ -13,8 +13,8 @@ class MedianEstimatorSpec extends MedianSpecUtils {
 
   def roundTo5(d: Double): Double = math.floor(d * 100000) / 100000
 
-//  basicMedianSpecs(() => new MedianEstimator(10), "- MedianEstimator with enough memory")
-//  sufficientMemoryProperties(i => new MedianEstimator(i))
+  basicMedianSpecs[mutable.Map[(Long, Long), Long], MedianEstimator](() => new MedianEstimator(10), "- MedianEstimator with enough memory")
+  sufficientMemoryProperties[mutable.Map[(Long, Long), Long], MedianEstimator](i => new MedianEstimator(i))
 
   "MedianEstimator" should {
     "Can get correct answer compressing 3 points to 2" in {
