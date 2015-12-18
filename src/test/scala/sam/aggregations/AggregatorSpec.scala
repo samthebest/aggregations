@@ -253,7 +253,7 @@ class AggregatorSpec extends Specification with Serializable {
 
     }
 
-    "Full interesting example using 3 step approach" in {
+    "Full interesting example using 3 step approach 2" in {
       trait Key
       case class MonthDemographic(code: Int, personType: String, monthSinceEpoch: Int) extends Key
       case class WindowDemographic(code: Int, personType: String, windowCenter: Int) extends Key
@@ -302,24 +302,22 @@ class AggregatorSpec extends Specification with Serializable {
           WindowDemographic(133, "cardinal", 7) -> 1L,
           WindowDemographic(133, "cardinal", 8) -> 1L,
 
-          MonthDemographic(133, "friar", 5) -> 1L,
-          MonthDemographic(133, "friar", 6) -> 1L,
-          MonthDemographic(133, "friar", 7) -> 1L
+          WindowDemographic(133, "friar", 5) -> 1L,
+          WindowDemographic(133, "friar", 6) -> 1L,
+          WindowDemographic(133, "friar", 7) -> 1L
         )
         , Map(
           WindowDemographic(100, "cardinal", 6) -> 1L,
           WindowDemographic(100, "cardinal", 7) -> 1L,
           WindowDemographic(100, "cardinal", 8) -> 1L,
-          WindowDemographicSimple(133, 6) -> 1L,
-          WindowDemographicSimple(133, 7) -> 1L,
+          WindowDemographicSimple(133, 6) -> 2L,
+          WindowDemographicSimple(133, 7) -> 2L,
           WindowDemographicSimple(133, 8) -> 1L,
 
           WindowDemographic(100, "friar", 5) -> 1L,
           WindowDemographic(100, "friar", 6) -> 1L,
           WindowDemographic(100, "friar", 7) -> 1L,
-          WindowDemographicSimple(100, 5) -> 1L,
-          WindowDemographicSimple(100, 6) -> 1L,
-          WindowDemographicSimple(100,  7) -> 1L
+          WindowDemographicSimple(133, 5) -> 1L
 
         )
         //        ,Map(

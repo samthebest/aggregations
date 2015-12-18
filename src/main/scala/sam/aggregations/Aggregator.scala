@@ -77,7 +77,7 @@ object MorePimps {
     /** tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
       * User must choose tree for the domain to balance
       * number of stages against amount of data in each stage. See unit tests for examples. */
-    def aggTree1[S1, R1, KSuper >: K : ClassTag](aggregator: Aggregator[S1, V, R1] :: HNil,
+    def aggTree1[S1 <: {def copy(): S1}, R1, KSuper >: K : ClassTag](aggregator: Aggregator[S1, V, R1] :: HNil,
                                                  tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: HNil)]] = {
       // RDDs are invariant in T, hence horrible asInstanceOf
       val rddKSuper: RDD[(KSuper, V)] = rdd.asInstanceOf[RDD[(KSuper, V)]]
@@ -86,8 +86,11 @@ object MorePimps {
       for (f <- tree) {
         treeList :+=
           treeList.last.flatMap {
-            case (key, state) => f(key).map(_ -> state)
+            case (key, state) => f(key).map(_ -> (state.head.copy() :: HNil))
           }
+
+//          .reduceByKey(merge1(aggregator, _, _))
+
           .reduceByKey(merge1(aggregator, _, _))
       }
 
