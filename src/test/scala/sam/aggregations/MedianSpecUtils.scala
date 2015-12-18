@@ -115,97 +115,104 @@ class MedianSpecUtils extends Specification with ScalaCheck {
       }
     }
 
-//  def sufficientMemoryProperties[T <: Aggregator[Double, Long, T]](memCappedFac: Int => T): Unit = {
-//    "median with sufficient memory 1" should {
-//      implicit val arbitraryParams: Arbitrary[(Int, Int, Int)] = Arbitrary(
-//        for {
-//          limit <- Gen.frequency((1, 10), (1, 20), (1, 50))
-//          n <- Gen.choose(5, limit)
-//          max <- Gen.choose(5, 500)
-//        } yield (limit, n, max)
-//      )
-//
-//      "Give correct answer for Normal dist when number of examples is less than limit" ! check(
-//        (params: (Int, Int, Int)) => (params.productIterator.forall(_.asInstanceOf[Int] > 0) &&
-//          params._2 <= params._1) ==> (params match {
-//          case (limit, n, max) =>
-//            val median = memCappedFac(limit)
-//            normalDistribution(median, n, max) must_=== 0.0
-//        }))
-//
-//      "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {
-//        val median = memCappedFac(10)
-//        median.update(55L)
-//        median.update(456L)
-//        median.update(4L)
-//
-//        val median2 = memCappedFac(10)
-//        median2.update(5L)
-//        median2.update(999L)
-//        median2.update(65L)
-//
-//        median.update(median2)
-//
-//        median.result must_=== 60.0
-//      }
-//    }
-//
-//    "median with sufficient memory 2" should {
-//      val bigMemCap = 500
-//      val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
-//      implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
-//        (1, Gen.listOfN(1, longGen)),
-//        (1, Gen.listOfN(2, longGen)),
-//        (1, Gen.listOfN(3, longGen)),
-//        (1, Gen.listOfN(5, longGen)),
-//        (1, Gen.listOfN(10, longGen)),
-//        (1, Gen.listOfN(25, longGen)),
-//        (1, Gen.listOfN(50, longGen))
-//      ))
-//
-//      "2 medians produce same results as a single median" ! check((l1: List[Long], l2: List[Long]) => {
-//        val median = memCappedFac(bigMemCap)
-//
-//        Random.shuffle(l1 ++ l2).foreach(median.update)
-//
-//        val median1 = memCappedFac(bigMemCap)
-//        val median2 = memCappedFac(bigMemCap)
-//
-//        l1.foreach(median1.update)
-//        l2.foreach(median2.update)
-//
-//        median1.update(median2)
-//
-//        median1.result must_=== median.result
-//      })
-//
-//      "5 medians produce same results as a single median" ! check(
-//        (l1: List[Long], l2: List[Long], l3: List[Long], l4: List[Long], l5: List[Long]) => {
-//          val median = memCappedFac(bigMemCap)
-//
-//          Random.shuffle(l1 ++ l2 ++ l3 ++ l4 ++ l5).foreach(median.update)
-//
-//          val median1 = memCappedFac(bigMemCap)
-//          val median2 = memCappedFac(bigMemCap)
-//          val median3 = memCappedFac(bigMemCap)
-//          val median4 = memCappedFac(bigMemCap)
-//          val median5 = memCappedFac(bigMemCap)
-//
-//          l1.foreach(median1.update)
-//          l2.foreach(median2.update)
-//          l3.foreach(median3.update)
-//          l4.foreach(median4.update)
-//          l5.foreach(median5.update)
-//
-//          median1.update(median2)
-//          median1.update(median3)
-//          median1.update(median4)
-//          median1.update(median5)
-//
-//          median1.result must_=== median.result
-//        })
-//    }
-//  }
+  def sufficientMemoryProperties[S, T <: Aggregator[S, Long, Double]](memCappedFac: Int => T): Unit = {
+    "median with sufficient memory 1" should {
+      implicit val arbitraryParams: Arbitrary[(Int, Int, Int)] = Arbitrary(
+        for {
+          limit <- Gen.frequency((1, 10), (1, 20), (1, 50))
+          n <- Gen.choose(5, limit)
+          max <- Gen.choose(5, 500)
+        } yield (limit, n, max)
+      )
+
+      "Give correct answer for Normal dist when number of examples is less than limit" ! check(
+        (params: (Int, Int, Int)) => (params.productIterator.forall(_.asInstanceOf[Int] > 0) &&
+          params._2 <= params._1) ==> (params match {
+          case (limit, n, max) =>
+            val median = memCappedFac(limit)
+            normalDistribution[S, T](median, n, max) must_=== 0.0
+        }))
+
+      "return 60 when we update via another median with just 55 and 456 and 4 and 5 and 999 and 65" in {
+        val median = memCappedFac(10)
+        val state = median.zero
+        median.mutate(state, 55L, 456L, 4L)
+
+        val median2 = memCappedFac(10)
+        val state2 = median.zero
+        median2.mutate(state2, 5L, 999L, 65L)
+
+        median.mutateAdd(state, state2)
+
+        median.result(state) must_=== 60.0
+      }
+    }
+
+    "median with sufficient memory 2" should {
+      val bigMemCap = 500
+      val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
+      implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
+        (1, Gen.listOfN(1, longGen)),
+        (1, Gen.listOfN(2, longGen)),
+        (1, Gen.listOfN(3, longGen)),
+        (1, Gen.listOfN(5, longGen)),
+        (1, Gen.listOfN(10, longGen)),
+        (1, Gen.listOfN(25, longGen)),
+        (1, Gen.listOfN(50, longGen))
+      ))
+
+      "2 medians produce same results as a single median" ! check((l1: List[Long], l2: List[Long]) => {
+        val median = memCappedFac(bigMemCap)
+        val state = median.zero
+
+        Random.shuffle(l1 ++ l2).foreach(median.mutate(state, _))
+
+        val median1 = memCappedFac(bigMemCap)
+        val state1 = median1.zero
+        val median2 = memCappedFac(bigMemCap)
+        val state2 = median2.zero
+
+        l1.foreach(median1.mutate(state1, _))
+        l2.foreach(median2.mutate(state2, _))
+
+        median1.mutateAdd(state1, state2)
+
+        median1.result(state1) must_=== median.result(state)
+      })
+
+      "5 medians produce same results as a single median" ! check(
+        (l1: List[Long], l2: List[Long], l3: List[Long], l4: List[Long], l5: List[Long]) => {
+          val median = memCappedFac(bigMemCap)
+          val state = median.zero
+
+          Random.shuffle(l1 ++ l2 ++ l3 ++ l4 ++ l5).foreach(median.mutate(state, _))
+
+          val median1 = memCappedFac(bigMemCap)
+          val state1 = median1.zero
+          val median2 = memCappedFac(bigMemCap)
+          val state2 = median2.zero
+          val median3 = memCappedFac(bigMemCap)
+          val state3 = median3.zero
+          val median4 = memCappedFac(bigMemCap)
+          val state4 = median4.zero
+          val median5 = memCappedFac(bigMemCap)
+          val state5 = median5.zero
+
+          l1.foreach(median1.mutate(state1, _))
+          l2.foreach(median1.mutate(state2, _))
+          l3.foreach(median1.mutate(state3, _))
+          l4.foreach(median1.mutate(state4, _))
+          l5.foreach(median1.mutate(state5, _))
+
+          median1.mutateAdd(state1, state2)
+          median1.mutateAdd(state1, state3)
+          median1.mutateAdd(state1, state4)
+          median1.mutateAdd(state1, state5)
+
+          median1.result(state1) must_=== median.result(state)
+        })
+    }
+  }
 
   def medianIsCommutative[S, T <: Aggregator[S, Long, Double]](memCappedFac: Int => T): Unit =
     "Median" should {
