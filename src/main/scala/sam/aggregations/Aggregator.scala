@@ -24,30 +24,15 @@ trait Aggregator[S, V, +R] extends Serializable {
 object Aggregator {
   // TODO an optimizer of some sort, e.g. when we ask for CountHistogram and Count, we can combine these
 
+
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
 
     // TODO Optional Boolean param for each step so user can say if they want
     // to keep that level
 
-    // tree.length is the depth of the tree,
-    // K => Nil signals early terminations of the tree
-
-    /**tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
-     * User must choose tree for the domain to balance
-      * number of stages against amount of data in each stage. See unit tests for examples.*/
-    def aggTree1[S1, R1, KSuper >: K](aggregator: Aggregator[S1, V, R1] :: HNil,
-                         tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: HNil)]] = {
-      List(rdd.aggByKey1(aggregator).asInstanceOf[RDD[(KSuper, R1 :: HNil)]])
-    }
-
 
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] =
       aggByKeyState1(aggregator).mapValues(aggsToResults1(aggregator, _))
-
-
-
-
-
 
 
     def aggByKeyState1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, S1 :: HNil)] = {
@@ -68,60 +53,10 @@ object Aggregator {
                             coveringKeys: K => List[K]): RDD[(K, R1 :: HNil)] = {
       val (firstLevel, secondLevel) = aggByKeyUpStateUncatted1(aggregator, coveringKeys)
       (firstLevel ++ secondLevel).mapValues(aggsToResults1(aggregator, _))
+
+
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   implicit class PimpedRDD[V: ClassTag](rdd: RDD[V]) {
     def agg1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): R1 :: HNil = {
@@ -131,3 +66,36 @@ object Aggregator {
   }
 }
 
+object MorePimps {
+
+  import sam.aggregations.Aggregator.PimpedPairRDD
+
+  implicit class PimpedPairRDDWithTreeAgg[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
+    // tree.length is the depth of the tree,
+    // K => Nil signals early terminations of the tree
+
+    /** tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
+      * User must choose tree for the domain to balance
+      * number of stages against amount of data in each stage. See unit tests for examples. */
+    def aggTree1[S1, R1, KSuper >: K : ClassTag](aggregator: Aggregator[S1, V, R1] :: HNil,
+                                                 tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: HNil)]] = {
+      // RDDs are invariant in T, hence horrible asInstanceOf
+      val rddKSuper: RDD[(KSuper, V)] = rdd.asInstanceOf[RDD[(KSuper, V)]]
+
+      (if (tree.isEmpty) {
+        List(rddKSuper.aggByKeyState1(aggregator))
+      } else {
+        List(
+          rddKSuper.aggByKeyState1(aggregator),
+          rddKSuper.aggByKeyState1(aggregator).flatMap {
+            case (key, state) => tree.head(key).map(_ -> state)
+          }
+          .reduceByKey(merge1(aggregator, _, _)): RDD[(KSuper, S1 :: HNil)]
+        )
+      })
+      .map(rdd => rdd.mapValues(aggsToResults1(aggregator, _)))
+    }
+  }
+
+
+}
