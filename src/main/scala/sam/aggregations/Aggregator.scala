@@ -5,6 +5,7 @@ import sam.aggregations.boiler_plate.AggToResultsCode._
 import sam.aggregations.boiler_plate.MergeCode._
 import sam.aggregations.boiler_plate.MutateCode._
 import sam.aggregations.boiler_plate.ZerosCode._
+import sam.aggregations.boiler_plate.CopyCode._
 import shapeless._
 import HList._
 
@@ -41,7 +42,7 @@ object Aggregator {
       tree.foldLeft(List(rdd.asInstanceOf[RDD[(KSuper, V)]].aggByKeyState1(aggregator)))((cum, branch) =>
         cum :+
           cum.last.cache().flatMap {
-            case (key, state) => branch(key).map(_ -> (aggregator.head.copyState(state.head) :: HNil))
+            case (key, state) => branch(key).map(_ -> copyStates1(aggregator, state))
           }
           .reduceByKey(merge1(aggregator, _, _))
       )
@@ -50,10 +51,18 @@ object Aggregator {
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] =
       aggByKeyState1(aggregator).mapValues(aggsToResults1(aggregator, _))
 
+//    def aggByKey2[S1, R1, S2, R2](aggregator: Aggregator[S1, V, R1] :: Aggregator[S2, V, R2] :: HNil): RDD[(K, R1 :: R2 :: HNil)] =
+//      aggByKeyState2(aggregator).mapValues(aggsToResults1(aggregator, _))
+
     def aggByKeyState1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, S1 :: HNil)] = {
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
       rdd.combineByKey(updateStates(zeros1(aggregator), _), updateStates, merge1(aggregator, _, _))
     }
+
+//    def aggByKeyState2[S1, R1, S2, R2](aggregator: Aggregator[S1, V, R1] :: Aggregator[S2, V, R2] :: HNil): RDD[(K, S1 :: S2 :: HNil)] = {
+//      val updateStates: (S1 :: S2 :: HNil, V) => S1 :: S2 :: HNil = mutate2(aggregator, _, _)
+//      rdd.combineByKey(updateStates(zeros2(aggregator), _), updateStates, merge2(aggregator, _, _))
+//    }
   }
 
   implicit class PimpedRDD[V: ClassTag](rdd: RDD[V]) {
