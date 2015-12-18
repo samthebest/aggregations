@@ -25,15 +25,19 @@ object Aggregator {
   // TODO an optimizer of some sort, e.g. when we ask for CountHistogram and Count, we can combine these
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
+
+    // TODO Optional Boolean param for each step so user can say if they want
+    // to keep that level
+
     // tree.length is the depth of the tree,
     // K => Nil signals early terminations of the tree
 
     /**tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
      * User must choose tree for the domain to balance
       * number of stages against amount of data in each stage. See unit tests for examples.*/
-    def aggTree1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil,
-                         tree: List[K => List[K]]): RDD[(K, R1 :: HNil)] = {
-      rdd.aggByKey1(aggregator)
+    def aggTree1[S1, R1, KSuper >: K](aggregator: Aggregator[S1, V, R1] :: HNil,
+                         tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: HNil)]] = {
+      List(rdd.aggByKey1(aggregator).asInstanceOf[RDD[(KSuper, R1 :: HNil)]])
     }
 
 
