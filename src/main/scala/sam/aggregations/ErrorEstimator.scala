@@ -55,111 +55,112 @@ object FromDummyDataReport {
 import Aggregator._
 
 object ErrorEstimator {
-  def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
-                                                                             medianFac: Long => M,
-                                                                             memoryCap: Int = 1000): FromTestDataReport = {
-    val estimates: RDD[(T, Double)] = testData.aggByKey[Double, M](medianFac).mapValues(_.result)
-
-    val correctMedianAndCounts: RDD[(T, (Double, Int))] =
-      testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
-        case (t, data) if data.length <= memoryCap => None
-        case (t, data) => Some((t, (correctMedian(data), data.length)))
-      }
-
-    val errorsAndNumExamples: List[(Double, Int)] =
-      estimates.join(correctMedianAndCounts).map {
-        case (_, (estimate, (correct, count))) => (relativeError(estimate, correct), count)
-      }
-      .collect().toList
-
-    val (errors, numExamples) = errorsAndNumExamples.unzip
-
-    val size = errorsAndNumExamples.size
-
-    if (size == 0) FromTestDataReport()
-    else FromTestDataReport(
-      errorsAndNumExamples = errorsAndNumExamples,
-      averageError = errors.sum / size,
-      bestError = errors.min,
-      worstError = errors.max,
-      averageNumExamples = numExamples.sum / size,
-      mostNumExamples = numExamples.max,
-      leastNumExamples = numExamples.min
-    )
-  }
+//  def fromTestData[T: ClassTag, M <: Aggregator[Double, Long, M] : ClassTag](testData: RDD[(T, Long)],
+//                                                                             medianFac: Long => M,
+//                                                                             memoryCap: Int = 1000): FromTestDataReport = {
+//    val estimates: RDD[(T, Double)] = testData.aggByKey[Double, M](medianFac).mapValues(_.result)
+//
+//    val correctMedianAndCounts: RDD[(T, (Double, Int))] =
+//      testData.groupBy(_._1).mapValues(_.map(_._2).toArray).flatMap {
+//        case (t, data) if data.length <= memoryCap => None
+//        case (t, data) => Some((t, (correctMedian(data), data.length)))
+//      }
+//
+//    val errorsAndNumExamples: List[(Double, Int)] =
+//      estimates.join(correctMedianAndCounts).map {
+//        case (_, (estimate, (correct, count))) => (relativeError(estimate, correct), count)
+//      }
+//      .collect().toList
+//
+//    val (errors, numExamples) = errorsAndNumExamples.unzip
+//
+//    val size = errorsAndNumExamples.size
+//
+//    if (size == 0) FromTestDataReport()
+//    else FromTestDataReport(
+//      errorsAndNumExamples = errorsAndNumExamples,
+//      averageError = errors.sum / size,
+//      bestError = errors.min,
+//      worstError = errors.max,
+//      averageNumExamples = numExamples.sum / size,
+//      mostNumExamples = numExamples.max,
+//      leastNumExamples = numExamples.min
+//    )
+//  }
 
   def correctMedian(numbers: Seq[Long]): Double = {
-    val exactMedian = new ExactMedian()
-    numbers.foreach(exactMedian.update)
-    exactMedian.result
+    val state = ExactMedian.zero
+    numbers.foreach(ExactMedian.mutate(state, _))
+    ExactMedian.result(state)
   }
 
-  def relativeError[M <: Aggregator[Double, Long, M]](numbers: Seq[Long], median: M): Double = {
-    numbers.foreach(median.update)
-    relativeError(median.result, correctMedian(numbers))
+  def relativeError[S, M <: Aggregator[S, Long, Double]](numbers: Seq[Long], median: M): Double = {
+    val state = median.zero
+    numbers.foreach(median.mutate(state, _))
+    relativeError(median.result(state), correctMedian(numbers))
   }
 
   def relativeError(estimate: Double, correct: Double): Double = math.abs(correct - estimate) / correct
-
-  val medianFac = MedianEstimator.apply _
-
+//
+//  val medianFac = MedianEstimator.apply _
+//
   def cappedNormal(cap: Int): Rand[Long] = new Gaussian(cap / 2.0, cap / 6.0).map(math.floor).map {
     case i if i < 0 => 0L
     case i if i > cap => cap.toLong
     case i => i.toLong
   }
-
-  def runExperimentsSlidingWindow(cases: Iterator[TestCase],
-                                  runs: Int = 100,
-                                  rand: Rand[Long] = cappedNormal(10000)): Iterator[FromDummyDataReport] =
-    cases.map {
-      case TestCase(totalDataPoints, memoryLimit) =>
-        FromDummyDataReport(
-          totalDataPoints = totalDataPoints,
-          memoryLimit = memoryLimit,
-          errorsAndDistinctCounts =
-            (1 to runs)
-            .map(_ => rand.sample(totalDataPoints).toList)
-            .map(data => (ErrorEstimator.relativeError(data, medianFac(memoryLimit)), data.distinct.size)).toList
-        )
-    }
-
-  def randomiseRDD[T: ClassTag](rdd: RDD[T]): RDD[T] =
-    rdd.map((new Random().nextInt(), _)).partitionBy(new HashPartitioner(rdd.partitions.length)).map(_._2)
-
-  // TODO Forgot to do this TDD cos I thought it was gona be much simpler.
-  def runExperimentsMapReduce(cases: Iterator[TestCase],
-                              sc: SparkContext,
-                              runs: Int = 100,
-                              rand: () => Rand[Long] = () => cappedNormal(10000),
-                              partitions: Int = 100): Array[FromDummyDataReport] =
-    randomiseRDD(sc.makeRDD(cases.toSeq, partitions).flatMap {
-      case testCase@TestCase(totalDataPoints, memoryLimit) =>
-        (1 to runs).flatMap(run => {
-          val data = rand().sample(totalDataPoints).toList
-          val distinctCount = data.distinct.size
-          data.map((TestCaseKey(testCase, run, distinctCount, correctMedian(data)), _))
-        })
-        .map(kv => (kv._1, new MedianEstimator(memoryLimit) + kv._2))
-    })
-    .mapPartitions(_.toList.groupBy(_._1).mapValues(_.map(_._2).reduce(_ + _)).toIterator)
-    .reduceByKey(_ + _)
-    .map {
-      case (TestCaseKey(testCase, run, distinctCount, correctMedian), median) => testCase ->(distinctCount, correctMedian, median)
-    }
-    .groupByKey().map {
-      case (TestCase(totalDataPoints, memoryLimit), results) => FromDummyDataReport(
-        totalDataPoints = totalDataPoints,
-        memoryLimit = memoryLimit,
-        errorsAndDistinctCounts =
-          results.map {
-            case (distinctCount, correctMedian, median) =>
-              (relativeError(median.result, correctMedian), distinctCount)
-          }
-          .toList
-      )
-    }
-    .collect()
+//
+//  def runExperimentsSlidingWindow(cases: Iterator[TestCase],
+//                                  runs: Int = 100,
+//                                  rand: Rand[Long] = cappedNormal(10000)): Iterator[FromDummyDataReport] =
+//    cases.map {
+//      case TestCase(totalDataPoints, memoryLimit) =>
+//        FromDummyDataReport(
+//          totalDataPoints = totalDataPoints,
+//          memoryLimit = memoryLimit,
+//          errorsAndDistinctCounts =
+//            (1 to runs)
+//            .map(_ => rand.sample(totalDataPoints).toList)
+//            .map(data => (ErrorEstimator.relativeError(data, medianFac(memoryLimit)), data.distinct.size)).toList
+//        )
+//    }
+//
+//  def randomiseRDD[T: ClassTag](rdd: RDD[T]): RDD[T] =
+//    rdd.map((new Random().nextInt(), _)).partitionBy(new HashPartitioner(rdd.partitions.length)).map(_._2)
+//
+//  // TODO Forgot to do this TDD cos I thought it was gona be much simpler.
+//  def runExperimentsMapReduce(cases: Iterator[TestCase],
+//                              sc: SparkContext,
+//                              runs: Int = 100,
+//                              rand: () => Rand[Long] = () => cappedNormal(10000),
+//                              partitions: Int = 100): Array[FromDummyDataReport] =
+//    randomiseRDD(sc.makeRDD(cases.toSeq, partitions).flatMap {
+//      case testCase@TestCase(totalDataPoints, memoryLimit) =>
+//        (1 to runs).flatMap(run => {
+//          val data = rand().sample(totalDataPoints).toList
+//          val distinctCount = data.distinct.size
+//          data.map((TestCaseKey(testCase, run, distinctCount, correctMedian(data)), _))
+//        })
+//        .map(kv => (kv._1, new MedianEstimator(memoryLimit) + kv._2))
+//    })
+//    .mapPartitions(_.toList.groupBy(_._1).mapValues(_.map(_._2).reduce(_ + _)).toIterator)
+//    .reduceByKey(_ + _)
+//    .map {
+//      case (TestCaseKey(testCase, run, distinctCount, correctMedian), median) => testCase ->(distinctCount, correctMedian, median)
+//    }
+//    .groupByKey().map {
+//      case (TestCase(totalDataPoints, memoryLimit), results) => FromDummyDataReport(
+//        totalDataPoints = totalDataPoints,
+//        memoryLimit = memoryLimit,
+//        errorsAndDistinctCounts =
+//          results.map {
+//            case (distinctCount, correctMedian, median) =>
+//              (relativeError(median.result, correctMedian), distinctCount)
+//          }
+//          .toList
+//      )
+//    }
+//    .collect()
 }
 
 case class TestCaseKey(testCase: TestCase, run: Int, distinctCount: Int, correctMedian: Double)

@@ -1,8 +1,10 @@
 package sam.aggregations
 
+import scala.collection.mutable
+
 class ExactMedianSpec extends MedianSpecUtils {
   sequential
 
-  basicMedianSpecs(() => new ExactMedian())
-  medianIsCommutative((_: Int) => new ExactMedian())
+  basicMedianSpecs[mutable.MutableList[Long], ExactMedian.type](() => ExactMedian)
+//  medianIsCommutative((_: Int) => new ExactMedian())
 }
