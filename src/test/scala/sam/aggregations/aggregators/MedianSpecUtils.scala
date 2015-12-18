@@ -1,9 +1,10 @@
-package sam.aggregations
+package sam.aggregations.aggregators
 
-import org.scalacheck.{Prop, Arbitrary, Gen}
+import org.scalacheck.{Arbitrary, Gen, Prop}
 import org.specs2.ScalaCheck
 import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
+import sam.aggregations.{Aggregator, ErrorEstimator}
 
 import scala.util.{Random, Success, Try}
 
@@ -18,7 +19,7 @@ object MedianSpecUtils {
     ErrorEstimator.relativeError[S, M]((1 to n).map(_ => rand.nextInt(max).toLong), median)
 }
 
-import MedianSpecUtils._
+import sam.aggregations.aggregators.MedianSpecUtils._
 
 class MedianSpecUtils extends Specification with ScalaCheck {
 

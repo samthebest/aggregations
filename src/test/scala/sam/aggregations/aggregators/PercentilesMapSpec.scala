@@ -1,4 +1,4 @@
-package sam.aggregations
+package sam.aggregations.aggregators
 
 import org.specs2.mutable.Specification
 

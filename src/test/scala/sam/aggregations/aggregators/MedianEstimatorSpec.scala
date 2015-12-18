@@ -1,6 +1,5 @@
 package sam.aggregations.aggregators
 
-import sam.aggregations.MedianSpecUtils
 import sam.aggregations.aggregators.MedianEstimator._
 
 import scala.collection.mutable

@@ -3,7 +3,7 @@ package sam.aggregations
 import breeze.stats.distributions.{Rand, Gaussian}
 import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.rdd.RDD
-import sam.aggregations.aggregators.MedianEstimator
+import sam.aggregations.aggregators.{ExactMedian, MedianEstimator}
 import shapeless._
 import HList._
 

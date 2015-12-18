@@ -1,4 +1,6 @@
-package sam.aggregations
+package sam.aggregations.aggregators
+
+import sam.aggregations.Aggregator
 
 import scala.collection.mutable
 
