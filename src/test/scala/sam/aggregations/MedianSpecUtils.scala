@@ -206,37 +206,40 @@ class MedianSpecUtils extends Specification with ScalaCheck {
 //        })
 //    }
 //  }
-//
-//  def medianIsCommutative[T <: Aggregator[Double, Long, T]](memCappedFac: Int => T): Unit =
-//    "Median" should {
-//      val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
-//      implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
-//        (1, Gen.listOfN(1, longGen)),
-//        (1, Gen.listOfN(2, longGen)),
-//        (1, Gen.listOfN(3, longGen)),
-//        (1, Gen.listOfN(5, longGen)),
-//        (1, Gen.listOfN(10, longGen)),
-//        (1, Gen.listOfN(25, longGen)),
-//        (1, Gen.listOfN(50, longGen))
-//      ))
-//
-//      "Order not important even with small cap (i.e. is commutative)" ! check((l1: List[Long], l2: List[Long]) =>
-//        (l1.nonEmpty && l2.nonEmpty) ==> {
-//          val smallCap = 10
-//
-//          val median1 = memCappedFac(smallCap)
-//          val median1Copy = memCappedFac(smallCap)
-//          val median2 = memCappedFac(smallCap)
-//
-//          l1.foreach(median1.update)
-//          l1.foreach(median1Copy.update)
-//          l2.foreach(median2.update)
-//
-//          median1.update(median2)
-//          median2.update(median1Copy)
-//
-//          median1.result must_=== median2.result
-//        })
-//    }
+
+  def medianIsCommutative[S, T <: Aggregator[S, Long, Double]](memCappedFac: Int => T): Unit =
+    "Median" should {
+      val longGen = Gen.choose(Long.MinValue / 2, Long.MaxValue / 2)
+      implicit val arbitraryListLongUpTo50: Arbitrary[List[Long]] = Arbitrary(Gen.frequency(
+        (1, Gen.listOfN(1, longGen)),
+        (1, Gen.listOfN(2, longGen)),
+        (1, Gen.listOfN(3, longGen)),
+        (1, Gen.listOfN(5, longGen)),
+        (1, Gen.listOfN(10, longGen)),
+        (1, Gen.listOfN(25, longGen)),
+        (1, Gen.listOfN(50, longGen))
+      ))
+
+      "Order not important even with small cap (i.e. is commutative)" ! check((l1: List[Long], l2: List[Long]) =>
+        (l1.nonEmpty && l2.nonEmpty) ==> {
+          val smallCap = 10
+
+          val median1 = memCappedFac(smallCap)
+          val state1 = median1.zero
+          val median1Copy = memCappedFac(smallCap)
+          val state1Copy = median1Copy.zero
+          val median2 = memCappedFac(smallCap)
+          val state2 = median2.zero
+
+          l1.foreach(median1.mutate(state1, _))
+          l1.foreach(median1Copy.mutate(state1Copy, _))
+          l2.foreach(median2.mutate(state2, _))
+
+          median1.mutateAdd(state1, state2)
+          median2.mutateAdd(state2, state1Copy)
+
+          median1.result(state1) must_=== median2.result(state2)
+        })
+    }
 
 }

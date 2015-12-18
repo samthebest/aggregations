@@ -6,5 +6,5 @@ class ExactMedianSpec extends MedianSpecUtils {
   sequential
 
   basicMedianSpecs[mutable.MutableList[Long], ExactMedian.type](() => ExactMedian)
-//  medianIsCommutative((_: Int) => new ExactMedian())
+  medianIsCommutative[mutable.MutableList[Long], ExactMedian.type]((_: Int) => ExactMedian)
 }
