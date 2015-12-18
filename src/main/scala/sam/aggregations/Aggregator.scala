@@ -15,8 +15,8 @@ import scala.reflect.ClassTag
 
 trait Aggregator[S, V, +R] extends Serializable {
   //with Semigroup[S] {
-  def mutate(state: S, e: V): Unit
-  def mutateAdd(state: S, e: S): Unit
+  def mutate(state: S, element: V): Unit
+  def mutateAdd(stateL: S, stateR: S): Unit
   def result(state: S): R
   def zero: S
 }
@@ -25,8 +25,26 @@ object Aggregator {
   // TODO an optimizer of some sort, e.g. when we ask for CountHistogram and Count, we can combine these
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
+    // tree.length is the depth of the tree,
+    // K => Nil signals early terminations of the tree
+
+    /**tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
+     * User must choose tree for the domain to balance
+      * number of stages against amount of data in each stage. See unit tests for examples.*/
+    def aggTree1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil,
+                         tree: List[K => List[K]]): RDD[(K, R1 :: HNil)] = {
+      rdd.aggByKey1(aggregator)
+    }
+
+
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] =
       aggByKeyState1(aggregator).mapValues(aggsToResults1(aggregator, _))
+
+
+
+
+
+
 
     def aggByKeyState1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, S1 :: HNil)] = {
       val updateStates: (S1 :: HNil, V) => S1 :: HNil = mutate1(aggregator, _, _)
@@ -48,20 +66,58 @@ object Aggregator {
       (firstLevel ++ secondLevel).mapValues(aggsToResults1(aggregator, _))
     }
 
-    // tree.length is the depth of the tree,
-    // K => Nil signals early terminations of the tree
 
-//    def aggTree1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil,
-//                          tree: List[K => List[K]]): RDD[(K, R1 :: HNil)] = {
-//
-//      tree.foldLeft(Nil)((cum, cur) => {
-//        val (lowerLevel, higherLevel) = aggByKeyUpStateUncatted1(aggregator, cur)
-//
-//      })
-//
-//      ???
-//    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   implicit class PimpedRDD[V: ClassTag](rdd: RDD[V]) {
     def agg1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): R1 :: HNil = {

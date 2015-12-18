@@ -1,5 +1,6 @@
 package sam.aggregations
 
+import scala.collection.immutable.IndexedSeq
 import scala.reflect.ClassTag
 
 object Utils {
@@ -11,15 +12,18 @@ object Utils {
     require(n > 1, "n must be greater than 1")
     require(n <= tToCount.size, s"Cannot define nth-tiles with less data points (${tToCount.size}) than n ($n)")
 
-    val sorted = tToCount.toList.sortBy(_._1)
-    val cumDensity = cumulativeDensityInclusive(sorted)
-    val total = cumDensity.last._2
+    val sorted: List[(T, Long)] = tToCount.toList.sortBy(_._1)
+    val cumDensity: List[(T, Long)] = cumulativeDensityInclusive(sorted)
+    val numValuesLessThanMap: List[(T, Long)] = sorted.map(_._1).zip(0L +: cumDensity.map(_._2).dropRight(1))
+    val total: Long = cumDensity.last._2
 
+    val numeratorToFraction: List[(Int, Double)] = (0 to n - 1).reverse.map(i => (i, i.toDouble * total / n)).toList
+        
     (i: T) =>
-      sorted.map(_._1).zip(0L +: cumDensity.map(_._2).dropRight(1))
-      .toMap.get(i).flatMap(numValuesLessThan =>
+      numValuesLessThanMap.toMap.get(i)
+      .flatMap(numValuesLessThan =>
         // Probably inefficient, should be arithmetic trick, or should at least form a Map so we are memoized
-        (0 to n - 1).reverse.find(_.toDouble * total / n <= numValuesLessThan.toDouble))
+        numeratorToFraction.find(_._2 <= numValuesLessThan.toDouble).map(_._1))
   }
 
   def cumulativeDensityInclusive[T](tToCount: List[(T, Long)]): List[(T, Long)] =
