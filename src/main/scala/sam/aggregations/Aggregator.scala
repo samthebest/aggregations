@@ -27,6 +27,7 @@ trait Aggregator[S, -V, +R] extends Serializable {
 
 object Aggregator {
   // TODO an optimizer of some sort, e.g. when we ask for CountHistogram and Count, we can combine these
+  // this would require a lot of wrapping
 
 
   implicit class PimpedPairRDD[K: ClassTag, V: ClassTag](rdd: RDD[(K, V)]) {
@@ -52,6 +53,23 @@ object Aggregator {
           .reduceByKey(merge1(aggregator, _, _))
       )
       .map(_.mapValues(aggsToResults1(aggregator, _)))
+
+    def aggTree2[S1, R1, S2, R2, KSuper >: K : ClassTag](aggregator: Aggregator[S1, V, R1] :: Aggregator[S1, V, R2] :: HNil,
+                                                         tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, R1 :: R2 :: HNil)]] =
+      tree.foldLeft(List(rdd.asInstanceOf[RDD[(KSuper, V)]].aggByKeyState2(aggregator)))((cum, branch) =>
+        cum :+
+          cum.last.cache().flatMap {
+            case (key, state) => branch(key).map(_ -> copyStates2(aggregator, state))
+          }
+          .reduceByKey(merge2(aggregator, _, _))
+      )
+      .map(_.mapValues(aggsToResults2(aggregator, _)))
+
+    import syntax.std.tuple._
+
+    def aggTree2[S1, R1, S2, R2, KSuper >: K : ClassTag](aggregator: (Aggregator[S1, V, R1], Aggregator[S1, V, R2]),
+                                                         tree: List[KSuper => List[KSuper]]): List[RDD[(KSuper, (R1, R2))]] =
+      aggTree2(aggregator.productElements, tree).map(_.map(kv => (kv._1, kv._2.tupled)))
 
     def aggByKey1[S1, R1](aggregator: Aggregator[S1, V, R1] :: HNil): RDD[(K, R1 :: HNil)] =
       aggByKeyState1(aggregator).mapValues(aggsToResults1(aggregator, _))
