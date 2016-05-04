@@ -36,7 +36,9 @@ object Aggregator {
 
     // TODO Optional Boolean param for each step so user can say if they want to keep that level
 
-    /** tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
+    /** Technically this aggs over multiple trees 
+     * 
+     * tree is a list of functions from finer granularity keys to lists of coarser granularity keys.
       * User must choose tree for the domain to balance number of stages against amount of data in each stage.
       * See unit tests for examples.
       *
