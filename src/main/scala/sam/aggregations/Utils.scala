@@ -35,3 +35,60 @@ object Utils {
     ._1.reverse.toArray
   }
 }
+
+
+
+// (Warning: has very little meaning, cannot be understood, invented by statisticians).
+  // https://en.wikipedia.org/wiki/Percentile#Worked_Example_of_the_First_Variant
+  def percentileLinInterpFirstVariant(values: List[Double], p: Double): Double = {
+    val count = values.size
+    require(count > 1, "Need at least 2 values")
+
+    var ((value, index) :: tail, prevPercentRank, prevValue, result) =
+      (values.sorted.zipWithIndex, Option.empty[Double], 0.0, Option.empty[Double])
+
+    while (result.isEmpty) {
+      (prevPercentRank, (100.0 / count) * (index + 1 - 0.5), tail) match {
+        case (None, percentRank, _) if p < percentRank =>
+          result = Some(value)
+        case (_, percentRank, _) if p == percentRank =>
+          result = Some(value)
+        case (Some(prevPercentRank), percentRank, _) if prevPercentRank < p && p < percentRank =>
+          result = Some(count * (p - prevPercentRank) * (value - prevValue) / 100 + prevValue)
+        case (_, percentRank, Nil) =>
+          result = Some(value)
+        case (_, percentRank, (nextValue, nextIndex) :: nextTail) =>
+          prevValue = value
+          value = nextValue
+          index = nextIndex
+          tail = nextTail
+          prevPercentRank = Some(percentRank)
+      }
+    }
+
+    result.get
+  }
+  
+  
+  test("IMA.percentileLinInterpFirstVariant handles small sequences as per worked example on wikipedia: " +
+    "https://en.wikipedia.org/wiki/Percentile#Worked_Example_of_the_First_Variant") {
+    assert(IMA.percentileLinInterpFirstVariant(List(15, 20, 35, 40, 50), 5) == 15.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(15, 20, 35, 40, 50), 30) == 20.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(15, 20, 35, 40, 50), 40) == 27.5)
+    assert(IMA.percentileLinInterpFirstVariant(List(15, 20, 35, 40, 50), 95) == 50)
+  }
+
+  test("IMA.percentileLinInterpFirstVariant handles weird cases") {
+    assert(IMA.percentileLinInterpFirstVariant(List(0, 100), 50) == 50.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(0, 200), 50) == 100.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(0, 100), 50 + 12.5) == 75.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(0, 100, 200), 50) == 100.0)
+    assert(IMA.percentileLinInterpFirstVariant(List(0, 100, 200, 300), 75) == 250.0)
+  }
+  
+  
+  test("IMA.percentileLinInterpFirstVariant handles ordinary cases") {
+    assert(IMA.percentileLinInterpFirstVariant((1 to 99).map(_.toDouble).toList, 50) == 50.0)
+    assert(IMA.percentileLinInterpFirstVariant((101 to 199).map(_.toDouble).toList, 50) == 150.0)
+  }
+
